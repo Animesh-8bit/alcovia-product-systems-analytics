@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alcovia Dashboards</title>
+<style>
+:root {
+  --bg: #f7f7f3; --panel: #ffffff; --fg: #102a22; --muted: #5c6b64; --line: #e3e0d6;
+  --green: #08261e; --gold: #b8871a; --cream: #f7f7f3;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #04160f; --panel: #08261e; --fg: #f2efe6; --muted: #a9b5ae; --line: #1c3a30; --gold: #eabf36; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 880px; margin: 0 auto; padding: 48px max(16px, env(safe-area-inset-left, 0px)) 56px max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; gap: 16px; align-items: center; }
+header img { width: 56px; height: 56px; border-radius: 10px; background: #fff; padding: 4px; }
+h1 { font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-weight: 400; font-size: 2rem; margin: 0; }
+h1 b { color: var(--gold); font-weight: 400; }
+p { margin: 0; max-width: 64ch; }
+.muted { color: var(--muted); font-size: 0.9rem; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 16px; }
+a.card { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+a.card:hover, a.card:focus-visible { border-color: var(--gold); outline: none; }
+a.card h2 { margin: 0; font-size: 1.15rem; }
+a.card span.go { color: var(--gold); font-weight: 600; font-size: 0.9rem; margin-top: auto; }
+ul { margin: 0; padding-left: 1.2em; color: var(--muted); font-size: 0.92rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="gtm-tracker/alcovia-logo.png" alt="Alcovia logo">
+    <div>
+      <h1>Alcovia <b>dashboards</b></h1>
+      <p class="muted">Prototypes for the Product, Systems &amp; Analytics Lead assignment · sample data, made up for illustration</p>
+    </div>
+  </header>
+  <div class="cards">
+    <a class="card" href="gtm-tracker/">
+      <h2>P2 · GTM tracker</h2>
+      <p>Revenue against the ₹15L target by stream, the two-path funnel from ads and workshops, campaigns with what to do with each ad.</p>
+      <ul><li>Period selector: this month, last month, last 3 months, quarter to date, custom</li><li>Click a campaign to see its weekly performance</li></ul>
+      <span class="go">Open the GTM tracker →</span>
+    </a>
+    <a class="card" href="student-dashboard/">
+      <h2>P4 · Student dashboard</h2>
+      <p>What Alcovia delivered, how students rated it and how they performed, for Leadership, advisors and parents.</p>
+      <ul><li>Program overview, cohort review, one student, parent view</li><li>Month and advisor filters</li></ul>
+      <span class="go">Open the student dashboard →</span>
+    </a>
+  </div>
+  <p class="muted">Both dashboards read data exported from the reporting database (Postgres) by the same SQL as the KPI queries in the repository. Every figure is sample data, not Alcovia's numbers.</p>
+</main>
+</body>
+</html>

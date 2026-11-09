@@ -1,0 +1,635 @@
+{
+  "name": "Alcovia GTM tracker",
+  "description": "P2 · sample data, made up for illustration. Every card is a KPI file from sql/kpis/p2_gtm_tracker.",
+  "parameters": [
+    {
+      "id": "p-start_on",
+      "name": "Period start",
+      "slug": "start_on",
+      "type": "date/single",
+      "default": "2026-12-01"
+    },
+    {
+      "id": "p-end_on",
+      "name": "Period end",
+      "slug": "end_on",
+      "type": "date/single",
+      "default": "2027-02-26"
+    }
+  ],
+  "tabs": [
+    {
+      "id": 14,
+      "dashboard_id": 2,
+      "name": "Overview",
+      "position": 0,
+      "entity_id": "u4ZrQi-SwodzCur48-Ofy",
+      "created_at": "2026-11-09T06:23:25.83902Z",
+      "updated_at": "2026-11-09T06:23:25.83902Z"
+    },
+    {
+      "id": 15,
+      "dashboard_id": 2,
+      "name": "Revenue",
+      "position": 1,
+      "entity_id": "fjysb2NZOy4gtADqX9q26",
+      "created_at": "2026-11-09T06:23:25.83902Z",
+      "updated_at": "2026-11-09T06:23:25.83902Z"
+    },
+    {
+      "id": 16,
+      "dashboard_id": 2,
+      "name": "Funnel",
+      "position": 2,
+      "entity_id": "z3tIG2KQjjCf_Vjeusqc-",
+      "created_at": "2026-11-09T06:23:25.83902Z",
+      "updated_at": "2026-11-09T06:23:25.83902Z"
+    },
+    {
+      "id": 17,
+      "dashboard_id": 2,
+      "name": "Campaigns",
+      "position": 3,
+      "entity_id": "urKGPg-XbGV95kH0237AF",
+      "created_at": "2026-11-09T06:23:25.83902Z",
+      "updated_at": "2026-11-09T06:23:25.83902Z"
+    },
+    {
+      "id": 18,
+      "dashboard_id": 2,
+      "name": "Actions",
+      "position": 4,
+      "entity_id": "MnBlCAo5TIbzesExNChNW",
+      "created_at": "2026-11-09T06:23:25.83902Z",
+      "updated_at": "2026-11-09T06:23:25.83902Z"
+    }
+  ],
+  "cards": [
+    {
+      "tab": 14,
+      "row": 0,
+      "col": 0,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "01 · Revenue collected",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "revenue_collected"
+      },
+      "sql": "-- KPI 1: Revenue collected\n-- Definition : All payments received in the period, across the three streams.\n-- Formula    : SUM(payment amount) where payment date in period\n-- Source     : Razorpay\n-- Target     : ₹15,00,000 × months in period\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT SUM(amount) AS revenue_collected, COUNT(*) AS payments\nFROM revenue.payments, p\nWHERE paid_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 14,
+      "row": 0,
+      "col": 6,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "02 · Revenue vs target %",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "pct_of_target"
+      },
+      "sql": "-- KPI 2: Revenue vs target %\n-- Definition : Revenue collected as a share of the period's target.\n-- Formula    : Revenue ÷ (monthly revenue target × months in period)\n-- Source     : Razorpay + targets\n-- Target     : 100% or more\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT SUM(amount)                                 AS revenue,\n       round(ads.target('revenue_month') * ops.months_of_target(p.s, p.e))                                AS target,\n       round(100 * SUM(amount) / (ads.target('revenue_month') * ops.months_of_target(p.s, p.e)))          AS pct_of_target\nFROM revenue.payments, p\nWHERE paid_on BETWEEN p.s AND p.e\nGROUP BY p.s, p.e"
+    },
+    {
+      "tab": 14,
+      "row": 0,
+      "col": 12,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "03 · Revenue change vs before",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "change_pct"
+      },
+      "sql": "-- KPI 3: Revenue change vs before\n-- Definition : How revenue moved against the same-length period just before.\n-- Formula    : (Revenue this period − revenue period before) ÷ revenue period before\n-- Source     : Razorpay\n-- Target     : Above 0%\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\ncur  AS (SELECT SUM(amount) AS revenue FROM revenue.payments, p WHERE paid_on BETWEEN p.s AND p.e),\nprev AS (SELECT SUM(amount) AS revenue FROM revenue.payments, p WHERE paid_on BETWEEN ops.prev_start(p.s, p.e) AND p.s - 1)\nSELECT cur.revenue AS this_period, prev.revenue AS period_before,\n       round(100 * (cur.revenue - prev.revenue) / NULLIF(prev.revenue, 0)) AS change_pct\nFROM cur, prev"
+    },
+    {
+      "tab": 14,
+      "row": 0,
+      "col": 18,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "12 · Conversions",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "this_period"
+      },
+      "sql": "-- KPI 12: Conversions\n-- Definition : Families who paid for the full term in the period: the full program, or a trial renewal.\n-- Formula    : COUNT(Full program payments) + COUNT(Trial renewal payments) in period\n-- Source     : Razorpay\n-- Target     : 4 per month\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT COUNT(*) FILTER (WHERE paid_on BETWEEN p.s AND p.e AND payment_type IN ('Full program', 'Trial renewal'))                          AS this_period,\n       COUNT(*) FILTER (WHERE paid_on BETWEEN p.s AND p.e AND payment_type = 'Trial renewal')                AS of_which_via_trial,\n       round(ads.target('full_month') * ops.months_of_target(p.s, p.e))                                           AS target,\n       COUNT(*) FILTER (WHERE paid_on BETWEEN p.s AND p.e AND payment_type IN ('Full program', 'Trial renewal'))\n     - COUNT(*) FILTER (WHERE paid_on BETWEEN ops.prev_start(p.s, p.e) AND p.s - 1 AND payment_type IN ('Full program', 'Trial renewal')) AS change_vs_before\nFROM revenue.payments, p\nGROUP BY p.s, p.e"
+    },
+    {
+      "tab": 14,
+      "row": 3,
+      "col": 0,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "13 · Trials started",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "this_period"
+      },
+      "sql": "-- KPI 13: Trials started\n-- Definition : Families who paid for a 3-month trial in the period. They are in the Trial state, not converted.\n-- Formula    : COUNT(Trial payments) in period\n-- Source     : Razorpay\n-- Target     : 6 per month\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT COUNT(*) FILTER (WHERE paid_on BETWEEN p.s AND p.e AND payment_type IN ('Trial'))                          AS this_period,\n       round(ads.target('trial_month') * ops.months_of_target(p.s, p.e))                                           AS target,\n       COUNT(*) FILTER (WHERE paid_on BETWEEN p.s AND p.e AND payment_type IN ('Trial'))\n     - COUNT(*) FILTER (WHERE paid_on BETWEEN ops.prev_start(p.s, p.e) AND p.s - 1 AND payment_type IN ('Trial')) AS change_vs_before\nFROM revenue.payments, p\nGROUP BY p.s, p.e"
+    },
+    {
+      "tab": 14,
+      "row": 3,
+      "col": 6,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "14 · Workshop seats sold",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "this_period"
+      },
+      "sql": "-- KPI 14: Workshop seats sold\n-- Definition : Seats paid for in the period.\n-- Formula    : COUNT(Workshop seat payments) in period\n-- Source     : Razorpay\n-- Target     : 60 per month (30 × 2 workshops)\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT COUNT(*) FILTER (WHERE paid_on BETWEEN p.s AND p.e AND payment_type IN ('Workshop seat'))                          AS this_period,\n       round(ads.target('seats_month') * ops.months_of_target(p.s, p.e))                                           AS target,\n       COUNT(*) FILTER (WHERE paid_on BETWEEN p.s AND p.e AND payment_type IN ('Workshop seat'))\n     - COUNT(*) FILTER (WHERE paid_on BETWEEN ops.prev_start(p.s, p.e) AND p.s - 1 AND payment_type IN ('Workshop seat')) AS change_vs_before\nFROM revenue.payments, p\nGROUP BY p.s, p.e"
+    },
+    {
+      "tab": 14,
+      "row": 3,
+      "col": 12,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "18 · Workshop → program rate",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "workshop_to_program_pct"
+      },
+      "sql": "-- KPI 18: Workshop → program rate\n-- Definition : Share of workshop attendees in the period who later converted.\n-- Formula    : Workshop attendees who converted ÷ workshop attendees in period\n-- Source     : Workshop attendance + ClickUp + enrolments\n-- Target     : Past result about 1 in 18 (5.6%)\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT COUNT(*)                                               AS workshop_attendees,\n       COUNT(converted_on)                                    AS converted,\n       round(100.0 * COUNT(converted_on) / NULLIF(COUNT(*), 0), 1) AS workshop_to_program_pct\nFROM leads.v_lead_state, p\nWHERE entry_path = 'Workshop' AND created_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 14,
+      "row": 3,
+      "col": 18,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "20 · Days to decide",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "days_to_decide"
+      },
+      "sql": "-- KPI 20: Days to decide\n-- Definition : Average time from first contact to first payment (trial or full).\n-- Formula    : AVERAGE(first payment date − lead created date) for families who paid in the period\n-- Source     : ClickUp + enrolments\n-- Target     : 45 days or fewer\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT round(AVG(first_paid_on - created_on)) AS days_to_decide,\n       COUNT(*)                               AS families_paid,\n       ops.setting('days_to_decide')          AS target_days\nFROM leads.v_lead_state, p\nWHERE first_paid_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 14,
+      "row": 6,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "07 · Stream vs target %",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "stream"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "revenue",
+          "target"
+        ]
+      },
+      "sql": "-- KPI 7: Stream vs target %\n-- Definition : Each stream's revenue against its own target.\n-- Formula    : Stream revenue ÷ (stream monthly volume target × price × months in period)\n-- Source     : Razorpay + targets\n-- Target     : 100% or more\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\nstreams(stream, monthly_target) AS (VALUES\n    ('Full program', ads.target('full_month')  * ads.target('full_price')),\n    ('Trial',        ads.target('trial_month') * ads.target('trial_price')),\n    ('Workshops',    ads.target('seats_month') * ads.target('seat_price'))),\nrev AS (SELECT stream, SUM(amount) AS revenue FROM revenue.v_payment_stream, p WHERE paid_on BETWEEN p.s AND p.e GROUP BY stream)\nSELECT st.stream, COALESCE(rev.revenue, 0) AS revenue,\n       round(st.monthly_target * ops.months_of_target(p.s, p.e)) AS target,\n       round(100 * COALESCE(rev.revenue, 0) / (st.monthly_target * ops.months_of_target(p.s, p.e))) AS pct_of_target\nFROM streams st CROSS JOIN p LEFT JOIN rev USING (stream)\nORDER BY st.stream"
+    },
+    {
+      "tab": 14,
+      "row": 6,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "15 · Students onboarded (by month)",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "month"
+        ],
+        "graph.show_values": true,
+        "stackable.stack_type": "stacked",
+        "graph.metrics": [
+          "full_program",
+          "trial"
+        ]
+      },
+      "sql": "-- KPI 15: Students onboarded (by month)\n-- Definition : New paying students each month, split full program and trial.\n-- Formula    : COUNT(Full program payments) + COUNT(Trial payments) per month\n-- Source     : Razorpay + ClickUp\n-- Target     : 10 per month\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT to_char(date_trunc('month', paid_on), 'YYYY-MM')                       AS month,\n       COUNT(*) FILTER (WHERE payment_type = 'Full program')                  AS full_program,\n       COUNT(*) FILTER (WHERE payment_type = 'Trial')                         AS trial,\n       COUNT(*) FILTER (WHERE payment_type IN ('Full program', 'Trial'))      AS onboarded,\n       round((ads.target('full_month') + ads.target('trial_month')) * ops.months_of_target(\n           GREATEST(date_trunc('month', paid_on)::date, p.s),\n           LEAST((date_trunc('month', paid_on) + interval '1 month - 1 day')::date, p.e)), 1) AS target\nFROM revenue.payments, p\nWHERE paid_on BETWEEN p.s AND p.e\nGROUP BY date_trunc('month', paid_on), p.s, p.e\nORDER BY 1"
+    },
+    {
+      "tab": 14,
+      "row": 12,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "29 · Cost per qualified lead",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 29: Cost per qualified lead\n-- Definition : Program ad spend per qualified lead, with the period before.\n-- Formula    : Program ad spend in period ÷ paid-ad leads qualified in period\n-- Source     : Meta Ads + ClickUp\n-- Target     : ₹5,000 or less\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\nwin(name, s, e) AS (SELECT 'This period', p.s, p.e FROM p UNION ALL SELECT 'Period before', ops.prev_start(p.s, p.e), p.s - 1 FROM p),\nspend AS (SELECT win.name, SUM(d.spend) AS program_spend\n          FROM win JOIN ads.ad_daily d ON d.day BETWEEN win.s AND win.e\n          JOIN ads.ads a USING (ad_id) JOIN ads.campaigns c USING (campaign_id)\n          WHERE c.campaign_type = 'Program' GROUP BY win.name),\nqual AS (SELECT win.name, COUNT(l.lead_id) AS qualified_leads\n         FROM win LEFT JOIN leads.leads l ON l.source = 'Paid' AND l.qualified_on BETWEEN win.s AND win.e GROUP BY win.name)\nSELECT name, program_spend, qualified_leads,\n       round(program_spend / NULLIF(qualified_leads, 0)) AS cost_per_qualified_lead,\n       ads.target('cpql') AS ceiling\nFROM spend JOIN qual USING (name) ORDER BY name DESC"
+    },
+    {
+      "tab": 14,
+      "row": 12,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "10 · Unpaid invoices (amount, count)",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 10: Unpaid invoices (amount, count)\n-- Definition : Invoices issued and not yet paid today. Not period-based.\n-- Formula    : SUM / COUNT of invoices where issued ≤ today and paid date is empty\n-- Source     : Razorpay invoices\n-- Target     : 0\n-- Access     : full_access\n\nSELECT COUNT(*)                                                                   AS unpaid_invoices,\n       SUM(amount)                                                                AS unpaid_amount,\n       COUNT(*) FILTER (WHERE ops.as_of() - issued_on >= ops.setting('invoice_red')) AS unpaid_10_days_or_more\nFROM revenue.invoices\nWHERE paid_on IS NULL AND issued_on <= ops.as_of()"
+    },
+    {
+      "tab": 15,
+      "row": 0,
+      "col": 0,
+      "size_x": 8,
+      "size_y": 3,
+      "name": "04 · Full program revenue",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "revenue"
+      },
+      "sql": "-- KPI 4: Full program revenue\n-- Definition : Money from the full program, including trials that renewed into it.\n-- Formula    : SUM(amount) of payments in the 'Full program' stream\n-- Source     : Razorpay\n-- Target     : 4 × ₹2,40,000 per month\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT SUM(amount) AS revenue,\n       SUM(amount) FILTER (WHERE payment_type = 'Trial renewal') AS of_which_trial_renewals,\n       COUNT(*) AS payments\nFROM revenue.v_payment_stream, p\nWHERE stream = 'Full program' AND paid_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 15,
+      "row": 0,
+      "col": 8,
+      "size_x": 8,
+      "size_y": 3,
+      "name": "05 · Trial revenue",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "revenue"
+      },
+      "sql": "-- KPI 5: Trial revenue\n-- Definition : Money from 3-month trials.\n-- Formula    : SUM(amount) of payments in the 'Trial' stream\n-- Source     : Razorpay\n-- Target     : 6 × ₹50,000 per month\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT SUM(amount) AS revenue,\n       SUM(amount) FILTER (WHERE payment_type = 'Trial renewal') AS of_which_trial_renewals,\n       COUNT(*) AS payments\nFROM revenue.v_payment_stream, p\nWHERE stream = 'Trial' AND paid_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 15,
+      "row": 0,
+      "col": 16,
+      "size_x": 8,
+      "size_y": 3,
+      "name": "06 · Workshop revenue",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "revenue"
+      },
+      "sql": "-- KPI 6: Workshop revenue\n-- Definition : Money from workshop seats.\n-- Formula    : SUM(amount) of payments in the 'Workshops' stream\n-- Source     : Razorpay\n-- Target     : 60 × ₹3,999 per month\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT SUM(amount) AS revenue,\n       SUM(amount) FILTER (WHERE payment_type = 'Trial renewal') AS of_which_trial_renewals,\n       COUNT(*) AS payments\nFROM revenue.v_payment_stream, p\nWHERE stream = 'Workshops' AND paid_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 15,
+      "row": 3,
+      "col": 0,
+      "size_x": 8,
+      "size_y": 6,
+      "name": "08 · Stream share of revenue",
+      "display": "pie",
+      "visualization_settings": {
+        "pie.dimension": "stream",
+        "pie.metric": "revenue"
+      },
+      "sql": "-- KPI 8: Stream share of revenue\n-- Definition : How much of all revenue each stream brought.\n-- Formula    : Stream revenue ÷ revenue collected\n-- Source     : Razorpay\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT stream, SUM(amount) AS revenue,\n       round(100 * SUM(amount) / SUM(SUM(amount)) OVER ()) AS share_pct\nFROM revenue.v_payment_stream, p\nWHERE paid_on BETWEEN p.s AND p.e\nGROUP BY stream ORDER BY stream"
+    },
+    {
+      "tab": 15,
+      "row": 3,
+      "col": 8,
+      "size_x": 8,
+      "size_y": 3,
+      "name": "09 · Workshop share of revenue",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "workshop_share_pct"
+      },
+      "sql": "-- KPI 9: Workshop share of revenue\n-- Definition : Workshop revenue as a share of all revenue.\n-- Formula    : Workshop revenue ÷ revenue collected\n-- Source     : Razorpay\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT SUM(amount) FILTER (WHERE stream = 'Workshops') AS workshop_revenue,\n       SUM(amount)                                     AS all_revenue,\n       round(100 * SUM(amount) FILTER (WHERE stream = 'Workshops') / SUM(amount)) AS workshop_share_pct\nFROM revenue.v_payment_stream, p\nWHERE paid_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 15,
+      "row": 3,
+      "col": 16,
+      "size_x": 8,
+      "size_y": 3,
+      "name": "16 · Trial-to-full renewal rate",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "renewal_rate_pct"
+      },
+      "sql": "-- KPI 16: Trial-to-full renewal rate\n-- Definition : Share of trials that ended in the period and renewed into the full program.\n-- Formula    : Trials renewed ÷ trials that ended in period\n-- Source     : students.enrolments\n-- Target     : Proposal: 50%+\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT COUNT(*)                                   AS trials_ended,\n       COUNT(*) FILTER (WHERE status = 'Renewed') AS renewed,\n       round(100.0 * COUNT(*) FILTER (WHERE status = 'Renewed') / NULLIF(COUNT(*), 0)) AS renewal_rate_pct\nFROM students.enrolments, p\nWHERE plan = 'Trial' AND status <> 'In trial' AND ends_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 15,
+      "row": 9,
+      "col": 0,
+      "size_x": 16,
+      "size_y": 6,
+      "name": "40 · Workshop break-even",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "held_on"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "break_even"
+        ]
+      },
+      "sql": "-- KPI 40: Workshop break-even\n-- Definition : Whether a workshop paid for its ads and venue.\n-- Formula    : Seat revenue ÷ (workshop ad spend + venue cost)\n-- Source     : Razorpay + Meta Ads + venue cost\n-- Target     : 1.00 or more\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\nw AS (SELECT ev.*, LAG(held_on) OVER (ORDER BY held_on) AS previous_on\n      FROM events.events ev JOIN events.event_types t USING (event_type_id) WHERE t.name = 'Public workshop'),\nspend AS (SELECT w.event_id, COALESCE(SUM(d.spend), 0) AS ad_spend\n          FROM w LEFT JOIN (ads.ad_daily d JOIN ads.ads a USING (ad_id) JOIN ads.campaigns c USING (campaign_id))\n            ON c.campaign_type = 'Workshop' AND d.day > COALESCE(w.previous_on, '-infinity') AND d.day <= w.held_on\n          GROUP BY w.event_id)\nSELECT w.event_id AS workshop_id, w.held_on, w.held_on > ops.as_of() AS still_selling,\n       w.seats_sold * ads.target('seat_price')                                                   AS seat_revenue,\n       spend.ad_spend, ads.target('venue')                                                       AS venue_cost,\n       round(w.seats_sold * ads.target('seat_price') / (spend.ad_spend + ads.target('venue')), 2) AS break_even,\n       (SELECT COUNT(converted_on) FROM leads.v_lead_state l WHERE l.workshop_id = w.event_id)   AS converted_later\nFROM w JOIN spend USING (event_id) CROSS JOIN p\nWHERE w.held_on BETWEEN p.s AND (date_trunc('month', p.e) + interval '1 month - 1 day')::date\nORDER BY w.held_on"
+    },
+    {
+      "tab": 15,
+      "row": 15,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 5,
+      "name": "39 · Ad spend per workshop seat",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 39: Ad spend per workshop seat\n-- Definition : Workshop ad spend per seat sold, per workshop in the period.\n-- Formula    : Workshop ad spend since the previous workshop ÷ seats sold\n-- Source     : Meta Ads + Razorpay\n-- Target     : ₹800 or less\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\nw AS (SELECT ev.*, LAG(held_on) OVER (ORDER BY held_on) AS previous_on\n      FROM events.events ev JOIN events.event_types t USING (event_type_id) WHERE t.name = 'Public workshop'),\nspend AS (SELECT w.event_id, COALESCE(SUM(d.spend), 0) AS ad_spend\n          FROM w LEFT JOIN (ads.ad_daily d JOIN ads.ads a USING (ad_id) JOIN ads.campaigns c USING (campaign_id))\n            ON c.campaign_type = 'Workshop' AND d.day > COALESCE(w.previous_on, '-infinity') AND d.day <= w.held_on\n          GROUP BY w.event_id)\nSELECT w.event_id AS workshop_id, w.held_on, w.seats_sold, spend.ad_spend,\n       round(spend.ad_spend / NULLIF(w.seats_sold, 0)) AS ad_spend_per_seat,\n       ads.target('cost_per_seat') AS ceiling\nFROM w JOIN spend USING (event_id) CROSS JOIN p\nWHERE w.held_on BETWEEN p.s AND (date_trunc('month', p.e) + interval '1 month - 1 day')::date\nORDER BY w.held_on"
+    },
+    {
+      "tab": 15,
+      "row": 15,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 5,
+      "name": "11 · Days unpaid",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 11: Days unpaid\n-- Definition : How long each open invoice has waited.\n-- Formula    : Today − invoice issue date\n-- Source     : Razorpay invoices\n-- Target     : Amber 5–9 days, red 10+ days\n-- Access     : full_access\n\nSELECT invoice_id, lead_id, plan, amount, issued_on,\n       ops.as_of() - issued_on AS days_unpaid,\n       CASE WHEN ops.as_of() - issued_on >= ops.setting('invoice_red')   THEN 'Red'\n            WHEN ops.as_of() - issued_on >= ops.setting('invoice_amber') THEN 'Amber' END AS colour\nFROM revenue.invoices\nWHERE paid_on IS NULL AND issued_on <= ops.as_of()\nORDER BY days_unpaid DESC"
+    },
+    {
+      "tab": 15,
+      "row": 20,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 5,
+      "name": "17 · Trials ending in 30 days",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 17: Trials ending in 30 days\n-- Definition : Trials still running that end within 30 days. Not period-based.\n-- Formula    : Trial end date − today, for trials in the Trial state, where ≤ 30\n-- Source     : students.enrolments\n-- Target     : Yellow 16–30, amber 8–15, red ≤ 7 days left\n-- Access     : full_access, team_access\n\nSELECT e.student_id, f.lead_id, e.ends_on,\n       e.ends_on - ops.as_of() AS days_left,\n       CASE WHEN e.ends_on - ops.as_of() <= ops.setting('renewal_red')   THEN 'Red'\n            WHEN e.ends_on - ops.as_of() <= ops.setting('renewal_amber') THEN 'Amber'\n            ELSE 'Yellow' END AS colour\nFROM students.enrolments e\nJOIN students.students s USING (student_id)\nJOIN students.families f USING (family_id)\nWHERE e.status = 'In trial' AND e.ends_on - ops.as_of() <= ops.setting('renewal_yellow')\nORDER BY days_left"
+    },
+    {
+      "tab": 16,
+      "row": 0,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 7,
+      "name": "23 · Share lost between steps",
+      "display": "funnel",
+      "visualization_settings": {
+        "funnel.dimension": "step",
+        "funnel.metric": "families"
+      },
+      "sql": "-- KPI 23: Share lost between steps\n-- Definition : How many families each step loses (both paths).\n-- Formula    : 1 − (count at step ÷ count at the step before)\n-- Source     : ClickUp + enrolments\n-- Target     : —\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\nc AS (SELECT l.* FROM leads.v_lead_state l, p WHERE l.created_on BETWEEN p.s AND p.e),\nsteps(n, step, families) AS (\n    SELECT 1, 'Came in', COUNT(*) FROM c UNION ALL\n    SELECT 2, 'Qualified or in nurture', COUNT(qualified_on) FROM c UNION ALL\n    SELECT 3, 'Ambition interview', COUNT(interview_on) FROM c UNION ALL\n    SELECT 4, 'Architect session (Leadership)', COUNT(architect_on) FROM c UNION ALL\n    SELECT 5, 'Paid (trial or full)', COUNT(first_paid_on) FROM c UNION ALL\n    SELECT 6, 'Converted: full term paid', COUNT(converted_on) FROM c)\nSELECT step, families,\n       round(100 * (1 - families::numeric / NULLIF(LAG(families) OVER (ORDER BY n), 0))) AS lost_pct\nFROM steps ORDER BY n"
+    },
+    {
+      "tab": 16,
+      "row": 0,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 7,
+      "name": "22 · Funnel step count",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 22: Funnel step count\n-- Definition : Families from the period's intake who reached each step, by entry path.\n-- Formula    : COUNT(leads in intake) where the step's date is filled\n-- Source     : ClickUp stage dates + enrolments\n-- Target     : —\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\npaths AS (SELECT unnest(ARRAY['All', 'Ads', 'Workshop']) AS path)\nSELECT paths.path,\n       COUNT(l.lead_id)          AS came_in,\n       COUNT(l.qualified_on)     AS qualified_or_nurture,\n       COUNT(l.call_booked_on)   AS call_booked,\n       COUNT(l.call_attended_on) AS call_held,\n       COUNT(l.interview_on)     AS ambition_interview,\n       COUNT(l.architect_on)     AS architect_session,\n       COUNT(l.first_paid_on)    AS paid_trial_or_full,\n       COUNT(*) FILTER (WHERE l.first_plan = 'Trial') AS of_which_trial,\n       COUNT(l.converted_on)     AS converted\nFROM paths CROSS JOIN p\nLEFT JOIN leads.v_lead_state l ON (paths.path = 'All' OR l.entry_path = paths.path) AND l.created_on BETWEEN p.s AND p.e\nGROUP BY paths.path ORDER BY paths.path"
+    },
+    {
+      "tab": 16,
+      "row": 7,
+      "col": 0,
+      "size_x": 8,
+      "size_y": 5,
+      "name": "21 · Leads / families who came in",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "entry_path"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "this_period",
+          "period_before"
+        ]
+      },
+      "sql": "-- KPI 21: Leads / families who came in\n-- Definition : Website form leads plus workshop attendees in the period, by entry path.\n-- Formula    : COUNT(leads) where created date in period, by entry path\n-- Source     : n8n lead webhook → ClickUp; workshop attendance\n-- Target     : —\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT entry_path,\n       COUNT(*) FILTER (WHERE created_on BETWEEN p.s AND p.e)                               AS this_period,\n       COUNT(*) FILTER (WHERE created_on BETWEEN ops.prev_start(p.s, p.e) AND p.s - 1)      AS period_before\nFROM leads.leads, p\nGROUP BY entry_path ORDER BY entry_path"
+    },
+    {
+      "tab": 16,
+      "row": 7,
+      "col": 8,
+      "size_x": 8,
+      "size_y": 5,
+      "name": "25 · Ambition interview outcomes",
+      "display": "pie",
+      "visualization_settings": {
+        "pie.dimension": "interview_outcome",
+        "pie.metric": "families"
+      },
+      "sql": "-- KPI 25: Ambition interview outcomes\n-- Definition : Interview results split by who said no.\n-- Formula    : COUNT by outcome: passed / rejected by Alcovia / dropped by family\n-- Source     : ClickUp stage + reason\n-- Target     : —\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT interview_outcome, COUNT(*) AS families,\n       round(100.0 * COUNT(*) / SUM(COUNT(*)) OVER ()) AS share_pct\nFROM leads.leads, p\nWHERE created_on BETWEEN p.s AND p.e AND interview_outcome IS NOT NULL\nGROUP BY interview_outcome ORDER BY families DESC"
+    },
+    {
+      "tab": 16,
+      "row": 7,
+      "col": 16,
+      "size_x": 8,
+      "size_y": 5,
+      "name": "26 · Where families came from",
+      "display": "pie",
+      "visualization_settings": {
+        "pie.dimension": "source",
+        "pie.metric": "families"
+      },
+      "sql": "-- KPI 26: Where families came from\n-- Definition : Intake split by source. Organic = form lead with no paid campaign tag.\n-- Formula    : COUNT(leads) by source: Meta ads / organic form / workshop\n-- Source     : ClickUp source + campaign tags\n-- Target     : —\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT CASE source WHEN 'Paid' THEN 'Meta ads' WHEN 'Organic' THEN 'Organic (form, no ad)' ELSE 'Workshops' END AS source,\n       COUNT(*) AS families,\n       round(100.0 * COUNT(*) / SUM(COUNT(*)) OVER ()) AS share_pct\nFROM leads.leads, p\nWHERE created_on BETWEEN p.s AND p.e\nGROUP BY 1 ORDER BY families DESC"
+    },
+    {
+      "tab": 16,
+      "row": 12,
+      "col": 0,
+      "size_x": 6,
+      "size_y": 3,
+      "name": "24 · Discovery call show-up rate",
+      "display": "scalar",
+      "visualization_settings": {
+        "scalar.field": "show_up_pct"
+      },
+      "sql": "-- KPI 24: Discovery call show-up rate\n-- Definition : Booked discovery calls that were attended (ads path).\n-- Formula    : Calls attended ÷ calls booked\n-- Source     : ClickUp + Smallest.ai\n-- Target     : Proposal: 80%+\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT COUNT(call_booked_on) AS booked, COUNT(call_attended_on) AS attended,\n       round(100.0 * COUNT(call_attended_on) / NULLIF(COUNT(call_booked_on), 0)) AS show_up_pct\nFROM leads.leads, p\nWHERE created_on BETWEEN p.s AND p.e"
+    },
+    {
+      "tab": 16,
+      "row": 12,
+      "col": 6,
+      "size_x": 18,
+      "size_y": 3,
+      "name": "19 · Program conversion %",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 19: Program conversion %\n-- Definition : Share of families who came in during the period and converted.\n-- Formula    : Converted ÷ families who came in during the period\n-- Source     : ClickUp + enrolments\n-- Target     : —\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\npaths AS (SELECT unnest(ARRAY['All', 'Ads', 'Workshop']) AS path)\nSELECT paths.path, COUNT(l.lead_id) AS came_in, COUNT(l.converted_on) AS converted,\n       COUNT(*) FILTER (WHERE l.state = 'Trial') AS still_in_trial,\n       round(100.0 * COUNT(l.converted_on) / NULLIF(COUNT(l.lead_id), 0), 1) AS conversion_pct\nFROM paths CROSS JOIN p\nLEFT JOIN leads.v_lead_state l ON (paths.path = 'All' OR l.entry_path = paths.path) AND l.created_on BETWEEN p.s AND p.e\nGROUP BY paths.path ORDER BY paths.path"
+    },
+    {
+      "tab": 16,
+      "row": 15,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "28 · Open leads ageing trend",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "week"
+        ],
+        "graph.show_values": true,
+        "stackable.stack_type": "stacked",
+        "graph.metrics": [
+          "days_46_60",
+          "days_61_90",
+          "over_90_days"
+        ]
+      },
+      "sql": "-- KPI 28: Open leads ageing trend\n-- Definition : Each week, how many open leads were older than the target, by age band.\n-- Formula    : For each week end W: COUNT(leads created ≤ W, not paid by W, not closed by W, W − created > 45), split 46–60 / 61–90 / 90+\n-- Source     : ClickUp + enrolments\n-- Target     : Falling to 0\n-- Access     : full_access, team_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e),\nweeks AS (\n    SELECT w::date AS week, LEAST(w::date + 6, ops.as_of()) AS week_end\n    FROM p, generate_series(date_trunc('week', p.s), p.e, interval '7 days') AS w\n)\nSELECT weeks.week, weeks.week_end,\n       COUNT(*) FILTER (WHERE age BETWEEN ops.setting('days_to_decide') + 1 AND 60) AS days_46_60,\n       COUNT(*) FILTER (WHERE age BETWEEN 61 AND 90)                                 AS days_61_90,\n       COUNT(*) FILTER (WHERE age > 90)                                              AS over_90_days,\n       COUNT(*) FILTER (WHERE age > ops.setting('days_to_decide'))                   AS total\nFROM weeks\nLEFT JOIN LATERAL (\n    SELECT weeks.week_end - l.created_on AS age\n    FROM leads.v_lead_state l\n    WHERE l.created_on <= weeks.week_end\n      AND (l.first_paid_on IS NULL OR l.first_paid_on > weeks.week_end)\n      AND (l.closed_on IS NULL OR l.closed_on > weeks.week_end)\n) open_leads ON true\nGROUP BY weeks.week, weeks.week_end\nORDER BY weeks.week"
+    },
+    {
+      "tab": 16,
+      "row": 15,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "27 · Open leads past target",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 27: Open leads past target\n-- Definition : Leads still in play today that came in more than 45 days ago. Not period-based.\n-- Formula    : COUNT(leads) where not paid, not closed, today − created > 45\n-- Source     : ClickUp + enrolments\n-- Target     : 0\n-- Access     : full_access, team_access\n\nSELECT lead_id,\n       CASE entry_path WHEN 'Ads' THEN 'Ads and website form' ELSE 'Workshop' END AS came_from,\n       CASE WHEN architect_on     IS NOT NULL THEN 'Architect session'\n            WHEN interview_on     IS NOT NULL THEN 'Ambition interview'\n            WHEN call_attended_on IS NOT NULL THEN 'Discovery call held'\n            WHEN call_booked_on   IS NOT NULL THEN 'Discovery call booked'\n            WHEN qualified_on     IS NOT NULL THEN 'Qualified or in nurture'\n            ELSE 'New lead' END                                                   AS furthest_step,\n       COALESCE(architect_on, interview_on, call_attended_on, call_booked_on, qualified_on, created_on) AS last_step_on,\n       ops.as_of() - created_on                                                   AS days_open\nFROM leads.v_lead_state\nWHERE first_paid_on IS NULL AND closed_on IS NULL\n  AND ops.as_of() - created_on > ops.setting('days_to_decide')\nORDER BY days_open DESC"
+    },
+    {
+      "tab": 17,
+      "row": 0,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 7,
+      "name": "31 · Click rate (CTR)",
+      "display": "row",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "ad"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "ctr_pct"
+        ]
+      },
+      "sql": "-- KPI 31: Click rate (CTR)\n-- Definition : How often people who saw an ad clicked it, best to worst.\n-- Formula    : Clicks ÷ impressions\n-- Source     : Meta Ads\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT ad, campaign, type, impressions, clicks, ctr_pct\nFROM p, ads.period_ads(p.s, p.e)\nORDER BY ctr_pct DESC"
+    },
+    {
+      "tab": 17,
+      "row": 0,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 7,
+      "name": "34 · Cost per result",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 34: Cost per result\n-- Definition : Spend per qualified lead (program) or per seat (workshop), per ad and per campaign.\n-- Formula    : Spend ÷ results\n-- Source     : Meta Ads + ClickUp / Razorpay\n-- Target     : ₹5,000 per lead; ₹800 per seat\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT campaign, ad, spend, results, cost_per_result, ceiling,\n       round(SUM(spend) OVER (PARTITION BY campaign) / NULLIF(SUM(results) OVER (PARTITION BY campaign), 0)) AS campaign_cost_per_result\nFROM p, ads.period_ads(p.s, p.e)\nORDER BY campaign, cost_per_result"
+    },
+    {
+      "tab": 17,
+      "row": 7,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "30 · Spend",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 30: Spend\n-- Definition : Meta ad spend in the period, per campaign and per ad.\n-- Formula    : SUM(spend) in period, per ad or campaign\n-- Source     : Meta Ads\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT campaign, ad, spend, SUM(spend) OVER (PARTITION BY campaign) AS campaign_spend\nFROM p, ads.period_ads(p.s, p.e)\nORDER BY campaign_spend DESC, spend DESC"
+    },
+    {
+      "tab": 17,
+      "row": 7,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "32 · Frequency",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 32: Frequency\n-- Definition : Average times each person has seen the ad (latest in the period); campaign = highest of its ads.\n-- Formula    : Impressions ÷ reach as Meta reports it\n-- Source     : Meta Ads\n-- Target     : Below 3\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT campaign, ad, frequency,\n       MAX(frequency) OVER (PARTITION BY campaign) AS campaign_frequency,\n       frequency >= ads.target('frequency')        AS needs_refresh\nFROM p, ads.period_ads(p.s, p.e)\nORDER BY frequency DESC"
+    },
+    {
+      "tab": 17,
+      "row": 13,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "33 · Results",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 33: Results\n-- Definition : What each ad is for: qualified leads (program) or seats sold (workshop).\n-- Formula    : Program: paid-ad leads qualified in period · workshop: seat payments in period, per ad\n-- Source     : ClickUp / Razorpay, matched on campaign tags\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT campaign, ad, type, leads, results,\n       CASE type WHEN 'Program' THEN 'qualified leads' ELSE 'seats sold' END AS result_is\nFROM p, ads.period_ads(p.s, p.e)\nORDER BY campaign, results DESC"
+    },
+    {
+      "tab": 17,
+      "row": 13,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 5,
+      "name": "41 · Landing-page drop-off",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "page"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "dropoff_pct",
+          "dropoff_pct_before"
+        ]
+      },
+      "sql": "-- KPI 41: Landing-page drop-off\n-- Definition : Visitors who left without filling a form or booking, with the period before.\n-- Formula    : Visitors who left without acting ÷ visitors\n-- Source     : Google Analytics 4 + Microsoft Clarity\n-- Target     : Falling vs period before\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT page,\n       SUM(visitors) FILTER (WHERE day BETWEEN p.s AND p.e) AS visitors,\n       round(100.0 * SUM(dropoffs) FILTER (WHERE day BETWEEN p.s AND p.e) / SUM(visitors) FILTER (WHERE day BETWEEN p.s AND p.e), 1) AS dropoff_pct,\n       round(100.0 * SUM(dropoffs) FILTER (WHERE day < p.s) / NULLIF(SUM(visitors) FILTER (WHERE day < p.s), 0), 1)               AS dropoff_pct_before\nFROM ads.page_daily, p\nWHERE day BETWEEN ops.prev_start(p.s, p.e) AND p.e\nGROUP BY page ORDER BY visitors DESC"
+    },
+    {
+      "tab": 17,
+      "row": 19,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 5,
+      "name": "42 · Load time",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 42: Load time\n-- Definition : How fast each landing page loads, mobile and desktop.\n-- Formula    : AVERAGE(daily page-speed check)\n-- Source     : Google PageSpeed Insights\n-- Target     : Mobile 3 s or less\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT page,\n       round(AVG(load_mobile_s), 2)  AS mobile_load_s,\n       round(AVG(load_desktop_s), 2) AS desktop_load_s,\n       AVG(load_mobile_s) > 3        AS mobile_over_3s\nFROM ads.page_daily, p\nWHERE day BETWEEN p.s AND p.e\nGROUP BY page ORDER BY page"
+    },
+    {
+      "tab": 18,
+      "row": 0,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 5,
+      "name": "35 · Scale",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 35: Scale\n-- Definition : Ads bringing results under their ceiling: spend more.\n-- Formula    : See the rule in 00_helpers.sql (ads.period_ads)\n-- Source     : Derived\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT ad, campaign, spend, frequency, results, cost_per_result, reason\nFROM p, ads.period_ads(p.s, p.e)\nWHERE action = 'Scale'\nORDER BY spend DESC"
+    },
+    {
+      "tab": 18,
+      "row": 0,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 5,
+      "name": "36 · Refresh",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 36: Refresh\n-- Definition : Ads whose audience has seen them 3 or more times: new creative, same audience.\n-- Formula    : See the rule in 00_helpers.sql (ads.period_ads)\n-- Source     : Derived\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT ad, campaign, spend, frequency, results, cost_per_result, reason\nFROM p, ads.period_ads(p.s, p.e)\nWHERE action = 'Refresh'\nORDER BY spend DESC"
+    },
+    {
+      "tab": 18,
+      "row": 5,
+      "col": 0,
+      "size_x": 24,
+      "size_y": 5,
+      "name": "37 · Drop",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 37: Drop\n-- Definition : Ads too expensive for 2 weeks running, or bringing leads and no good fits: switch off.\n-- Formula    : See the rule in 00_helpers.sql (ads.period_ads)\n-- Source     : Derived\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT ad, campaign, spend, frequency, results, cost_per_result, reason\nFROM p, ads.period_ads(p.s, p.e)\nWHERE action = 'Drop'\nORDER BY spend DESC"
+    },
+    {
+      "tab": 18,
+      "row": 10,
+      "col": 0,
+      "size_x": 24,
+      "size_y": 4,
+      "name": "38 · Watch",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- KPI 38: Watch\n-- Definition : Ads over the ceiling, but for less than 2 weeks.\n-- Formula    : See the rule in 00_helpers.sql (ads.period_ads)\n-- Source     : Derived\n-- Target     : —\n-- Access     : full_access\n\nWITH p AS (SELECT {{start_on}}::date AS s, {{end_on}}::date AS e)\nSELECT ad, campaign, spend, frequency, results, cost_per_result, reason\nFROM p, ads.period_ads(p.s, p.e)\nWHERE action = 'Watch'\nORDER BY spend DESC"
+    }
+  ]
+}

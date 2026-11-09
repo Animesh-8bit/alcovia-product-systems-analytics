@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alcovia Student Dashboard</title>
+<style>
+:root {
+  --color-fg: #1f1e1c; --color-fg-muted: #6b675f; --color-bg: #f7f6f3; --color-panel: #ffffff; --color-border-line: #e4e0d8;
+  --color-ok: #2e7d4f; --color-warn: #a86d12; --color-bad: #c0392b;
+  --cds-chart-muted: #b3ada3; --cds-chart-grid: #eeeae3; --cds-chart-axis: #cbc5ba; --cds-chart-reference: #8a857c; --cds-chart-status-critical: #c0392b;
+  --cds-surface-popover: #ffffff; --cds-border: #e4e0d8; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.12); --cds-text-secondary: #6b675f;
+  --font-anthropic-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-anthropic-serif: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --cds-font-size-caption: 12px; --cds-font-size-body: 14px; --cds-font-size-heading: 16px; --cds-font-size-title: 28px; --cds-font-weight-medium: 600;
+  --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-gap-xl: 32px;
+  --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 16px; --cds-pad-xl: 24px;
+  --cds-radius: 8px; --cds-dur-slow: 300ms; --cds-ease-out: cubic-bezier(.2,.8,.2,1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-fg: #ecebe8; --color-fg-muted: #a29e96; --color-bg: #1a1917; --color-panel: #23221f; --color-border-line: #3a3833;
+    --color-ok: #5fbf86; --color-warn: #e0a84a; --color-bad: #ef6f60;
+    --cds-chart-muted: #6e6a62; --cds-chart-grid: #312f2b; --cds-chart-axis: #4a4741; --cds-chart-reference: #8f8a81; --cds-chart-status-critical: #ef6f60;
+    --cds-surface-popover: #2b2a26; --cds-border: #3a3833; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.4); --cds-text-secondary: #a29e96;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: 14px; }
+#dash-root { max-width: 1280px; margin-inline: auto; padding-block: 28px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.dash-skeleton { background: color-mix(in srgb, var(--color-fg) 5%, transparent); border-radius: var(--cds-radius); }
+.ax-foot { margin-top: 28px; font-size: 12px; color: var(--color-fg-muted); }
+</style>
+<script src="d3.min.js"></script>
+<script src="data/data.js"></script>
+<script src="dash-shim.js"></script>
+</head>
+<body>
+<div id="dash-root">
+<style>
+.ax { display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); color: var(--color-fg); }
+.ax h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+.ax h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.ax h3 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.ax p { margin: 0; }
+.ax-head { display: flex; flex-direction: column; gap: var(--cds-gap-sm); }
+.ax-lede { font-size: var(--cds-font-size-body); max-width: 72ch; line-height: 1.5; }
+.ax .ax-lede b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ax-chips { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); align-items: center; }
+.ax-chip { display: inline-flex; align-items: center; gap: .35em; font-size: var(--cds-font-size-caption); padding: 2px 10px; border-radius: 999px; border: 1px solid var(--color-border-line); color: var(--color-fg-muted); }
+.ax-chip--theme { color: var(--color-fg); background: color-mix(in srgb, var(--color-warn) 14%, transparent); border-color: color-mix(in srgb, var(--color-warn) 40%, transparent); font-weight: var(--cds-font-weight-medium); }
+.ax-bar { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border-line); padding-bottom: var(--cds-pad-sm); }
+.ax-tabs { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); }
+.ax-tab { font: inherit; font-size: var(--cds-font-size-body); background: none; border: 1px solid transparent; border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); color: var(--color-fg-muted); cursor: pointer; }
+.ax-tab[aria-selected="true"] { color: var(--color-fg); background: var(--color-panel); border-color: var(--color-border-line); font-weight: var(--cds-font-weight-medium); }
+.ax-tab:focus-visible, .ax select:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+.ax-filters { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; }
+.ax-filters label { display: inline-flex; gap: var(--cds-gap-xs); align-items: center; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.ax select { font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: 4px 8px; max-width: 16rem; }
+.ax-section { display: flex; flex-direction: column; gap: var(--cds-gap-md); }
+.ax-intro { color: var(--color-fg-muted); font-size: var(--cds-font-size-body); max-width: 72ch; }
+.ax-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--cds-gap-md); }
+.ax-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+.ax-lens { font-size: var(--cds-font-size-caption); text-transform: uppercase; letter-spacing: .06em; color: var(--color-fg-muted); }
+.ax-big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ax-unit { font-size: var(--cds-font-size-body); color: var(--color-fg-muted); }
+.ax-sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.ax-up { color: var(--color-ok); }
+.ax-down { color: var(--color-bad); }
+.ax-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--cds-gap-md); }
+.ax-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); min-width: 0; }
+.ax-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.ax-chart { position: relative; min-height: 220px; }
+.ax-chart--short { min-height: 180px; }
+.ax-chart svg { display: block; overflow: visible; }
+.ax-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
+.ax-tip .ax-tip-h { color: var(--cds-text-secondary); }
+.ax-sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.ax-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.ax-legend span { display: inline-flex; align-items: center; }
+.ax-key { display: inline-block; width: 16px; height: 0; border-top: 2px solid; margin-right: 6px; }
+.ax-key--dash { border-top-style: dashed; }
+.ax-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+.ax-tablewrap { overflow: auto; max-height: 30rem; }
+.ax table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); font-variant-numeric: tabular-nums; }
+.ax th { text-align: left; font-weight: var(--cds-font-weight-medium); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); position: sticky; top: 0; background: var(--color-panel); white-space: nowrap; }
+.ax td { padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+.ax th.n, .ax td.n { text-align: right; }
+.ax tbody tr:last-child td { border-bottom: none; }
+.ax-pill { display: inline-block; min-width: 3.2em; text-align: center; padding: 1px 8px; border-radius: 999px; font-size: var(--cds-font-size-caption); }
+.ax-g { background: color-mix(in srgb, var(--color-ok) 16%, transparent); }
+.ax-a { background: color-mix(in srgb, var(--color-warn) 20%, transparent); }
+.ax-r { background: color-mix(in srgb, var(--color-bad) 18%, transparent); }
+.ax-strip { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-lg); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.ax .ax-strip b { color: var(--color-fg); font-weight: 600; }
+.ax-hm { display: grid; grid-template-columns: minmax(9rem, 1.6fr) repeat(3, minmax(4.5rem, 1fr)); gap: 3px; font-size: var(--cds-font-size-caption); min-width: 26rem; }
+.ax-hm-h { color: var(--color-fg-muted); padding: 4px 6px; }
+.ax-hm-l { padding: 6px; display: flex; flex-direction: column; justify-content: center; }
+.ax-hm-lvl { grid-column: 1 / -1; color: var(--color-fg-muted); text-transform: uppercase; letter-spacing: .06em; padding: 8px 6px 2px; }
+.ax-hm-c { padding: 6px; border-radius: 4px; text-align: center; font-variant-numeric: tabular-nums; }
+.ax-hm-c.ax-sel { outline: 2px solid var(--color-fg); outline-offset: -2px; }
+.ax-hm-c.ax-none { color: var(--color-fg-muted); background: color-mix(in srgb, var(--color-fg) 4%, transparent); }
+.ax-hm-wrap { overflow-x: auto; }
+.ax-profile { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-lg); align-items: baseline; }
+.ax-profile .ax-name { font-family: var(--font-anthropic-serif); font-size: var(--cds-font-size-title); }
+[data-dash-source-state=empty] { color: transparent; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+
+<div class="ax">
+  <header class="ax-head">
+    <h1>Alcovia student dashboard</h1>
+    <p class="ax-lede">In <b data-draw="lede-month">—</b>, Alcovia held <b data-draw="lede-held" data-source="delivery_month" data-field="held_pct">—</b> of planned sessions, students rated them <b data-draw="lede-rating" data-source="delivery_month" data-field="rating_avg">—</b> out of 5, and <b data-draw="lede-ontrack" data-source="cohort_month" data-field="on_track">—</b> of <b data-draw="lede-n" data-source="cohort_month" data-field="students">—</b> students are on track with their syllabus.</p>
+    <div class="ax-chips">
+      <span class="ax-chip ax-chip--theme">Quarter theme: Entrepreneurship (Jul–Sep 2027)</span>
+      <span class="ax-chip">Sample data: 20 made-up students, for illustration</span>
+    </div>
+  </header>
+
+  <div class="ax-bar">
+    <div class="ax-tabs" role="tablist" aria-label="Views">
+      <button class="ax-tab" role="tab" data-tab="overview" aria-selected="true">Program overview</button>
+      <button class="ax-tab" role="tab" data-tab="cohort" aria-selected="false">Cohort review</button>
+      <button class="ax-tab" role="tab" data-tab="student" aria-selected="false">Student</button>
+      <button class="ax-tab" role="tab" data-tab="parent" aria-selected="false">Parent view</button>
+    </div>
+    <div class="ax-filters">
+      <label>Month
+        <select class="ax-month" aria-label="Month">
+          <option value="2027-07">July 2027</option>
+          <option value="2027-08">August 2027</option>
+          <option value="2027-09">September 2027</option>
+        </select>
+      </label>
+      <label class="ax-advisor-wrap">Advisor
+        <select class="ax-advisor" aria-label="Advisor">
+          <option value="">All advisors</option>
+          <option value="Advisor A">Advisor A</option>
+          <option value="Advisor B">Advisor B</option>
+          <option value="Advisor C">Advisor C</option>
+        </select>
+      </label>
+      <label class="ax-student-wrap" hidden>Student
+        <select data-draw="student-select" data-source="students" aria-label="Student"></select>
+      </label>
+    </div>
+  </div>
+
+  <!-- 1. Program overview -->
+  <section class="ax-section" id="overview" data-page="overview">
+    <p class="ax-intro">For Leadership's monthly review. Each tile answers one of the three questions: did Alcovia conduct it, did Alcovians like it, and how did they perform.</p>
+    <div class="ax-tiles">
+      <div class="ax-tile">
+        <span class="ax-lens">Quantity · sessions held</span>
+        <span class="ax-big"><span data-draw="t-held" data-source="delivery_month" data-field="held_pct">—</span><span class="ax-unit">%</span></span>
+        <span class="ax-sub"><span data-draw="t-held-n" data-source="delivery_month" data-field="held">—</span> of <span data-draw="t-planned-n" data-source="delivery_month" data-field="planned">—</span> planned · <span data-draw="t-held-ch" data-source="delivery_month" data-field="held_pct_change">—</span> pts vs last month</span>
+      </div>
+      <div class="ax-tile">
+        <span class="ax-lens">Quality · average rating</span>
+        <span class="ax-big"><span data-draw="t-rating" data-source="delivery_month" data-field="rating_avg">—</span><span class="ax-unit"> / 5</span></span>
+        <span class="ax-sub"><span data-draw="t-ratings-n" data-source="delivery_month" data-field="ratings_n">—</span> ratings · <span data-draw="t-response" data-source="delivery_month" data-field="response_rate">—</span>% of attendees responded</span>
+      </div>
+      <div class="ax-tile">
+        <span class="ax-lens">Performance · on track with syllabus</span>
+        <span class="ax-big"><span data-draw="t-ontrack" data-source="cohort_month" data-field="on_track_pct">—</span><span class="ax-unit">%</span></span>
+        <span class="ax-sub"><span data-draw="t-ontrack-n" data-source="cohort_month" data-field="on_track">—</span> of <span data-draw="t-students-n" data-source="cohort_month" data-field="students">—</span> students · <span data-draw="t-ontrack-ch" data-source="cohort_month" data-field="on_track_change">—</span> pts vs last month</span>
+      </div>
+      <div class="ax-tile">
+        <span class="ax-lens">Performance · counted app minutes per day</span>
+        <span class="ax-big"><span data-draw="t-minutes" data-source="cohort_month" data-field="counted_min">—</span><span class="ax-unit"> min</span></span>
+        <span class="ax-sub">Target <span data-draw="target-min">—</span> min · <span data-draw="t-minutes-ch" data-source="cohort_month" data-field="counted_min_change">—</span> min vs last month</span>
+      </div>
+    </div>
+
+    <div class="ax-grid2">
+      <div class="ax-card" id="delivery-grid">
+        <h2>Delivery: sessions held of planned</h2>
+        <p class="ax-note">Green when everything planned was held, amber from 85%, red below. The selected month is outlined.</p>
+        <div class="ax-hm-wrap"><div data-draw="delivery-grid" data-source="delivery" class="dash-skeleton ax-chart"></div></div>
+      </div>
+      <div class="ax-card" id="quality-table">
+        <h2>Ratings by program item, lowest first</h2>
+        <p class="ax-note">Average rating from attendees after the host marks the session done, for the selected month.</p>
+        <div class="ax-tablewrap">
+          <table data-source="delivery" data-row-key="month,item">
+            <thead><tr><th data-field="item">Item</th><th data-field="level">Level</th><th class="n" data-field="rating_avg">Rating</th><th class="n" data-field="ratings_n">Ratings</th><th class="n" data-field="response_rate">Response %</th><th class="n" data-field="attendance_pct">Attendance %</th></tr></thead>
+            <tbody data-draw="quality-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="ax-card" id="minutes-trend">
+      <h2>Counted app minutes per day, all-student average by week</h2>
+      <p class="ax-note">Counted minutes = study + quiz + games capped at half of study and quiz. The dashed line is the 30-minute target.</p>
+      <div data-draw="cohort-trend" data-source="cohort_week" class="ax-chart dash-skeleton"></div>
+    </div>
+  </section>
+
+  <!-- 2. Cohort review -->
+  <section class="ax-section" id="cohort" data-page="cohort" hidden>
+    <p class="ax-intro">For the advisors' weekly review: every student on one table, the ones who need attention first. Green meets target, amber is close, red is behind.</p>
+    <div class="ax-strip" id="cohort-average">
+      <span>All-student average:</span>
+      <span><b data-draw="c-min" data-source="cohort_month" data-field="counted_min">—</b> counted min/day</span>
+      <span><b data-draw="c-quiz" data-source="cohort_month" data-field="quiz_participation">—</b>% quiz participation</span>
+      <span><b data-draw="c-syl" data-source="cohort_month" data-field="syllabus_pct">—</b>% syllabus done</span>
+      <span><b data-draw="c-ready" data-source="cohort_month" data-field="readiness">—</b> readiness score</span>
+      <span><b data-draw="c-att" data-source="cohort_month" data-field="attendance_pct">—</b>% attendance</span>
+    </div>
+    <div class="ax-card" id="cohort-table">
+      <h2>Students, needing attention first</h2>
+      <p class="ax-note">Sorted by the number of red, then amber, indicators. Syllabus pace target for the month is in the Pace column.</p>
+      <div class="ax-tablewrap">
+        <table data-source="cohort_table" data-row-key="month,student_id">
+          <thead><tr><th data-field="student">Student</th><th data-field="advisor">Advisor</th><th data-field="startup">Startup (theme)</th><th class="n" data-field="counted_min">Counted min/day</th><th class="n" data-field="quiz_participation">Quiz %</th><th class="n" data-field="syllabus_pct">Syllabus %</th><th class="n" data-field="pace_pct">Pace %</th><th class="n" data-field="readiness">Readiness</th><th class="n" data-field="attendance_pct">Attendance %</th><th class="n" data-field="rating_given">Rating given</th></tr></thead>
+          <tbody data-draw="cohort-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="ax-card" id="alerts">
+      <h2>Alerts this month</h2>
+      <p class="ax-note">Unusual hours on a chapter, score deviations from target and missed deadlines, sent to the student's advisor by n8n.</p>
+      <div class="ax-tablewrap">
+        <table data-source="alerts_table" data-row-key="alert_id">
+          <thead><tr><th data-field="date">Date</th><th data-field="student">Student</th><th data-field="type">Alert</th><th data-field="detail">Detail</th><th data-field="status">Status</th></tr></thead>
+          <tbody data-draw="alert-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Student drill-down -->
+  <section class="ax-section" id="student" data-page="student" hidden>
+    <div class="ax-profile">
+      <span class="ax-name" data-draw="s-name" data-source="students" data-field="student">—</span>
+      <span class="ax-chip"><span data-draw="s-advisor" data-source="students" data-field="advisor">—</span></span>
+      <span class="ax-chip ax-chip--theme">Entrepreneurship: <span data-draw="s-startup" data-source="students" data-field="startup">—</span></span>
+      <span class="ax-chip">Career roadmap: <span data-draw="s-career" data-source="students" data-field="career_roadmap">—</span></span>
+    </div>
+    <div class="ax-tiles">
+      <div class="ax-tile"><span class="ax-lens">Counted min/day</span><span class="ax-big" data-draw="s-min" data-source="cohort_table" data-field="counted_min">—</span></div>
+      <div class="ax-tile"><span class="ax-lens">Quiz accuracy %</span><span class="ax-big" data-draw="s-quiz" data-source="cohort_table" data-field="quiz_accuracy">—</span></div>
+      <div class="ax-tile"><span class="ax-lens">Readiness score</span><span class="ax-big" data-draw="s-ready" data-source="cohort_table" data-field="readiness">—</span></div>
+      <div class="ax-tile"><span class="ax-lens">Attendance %</span><span class="ax-big" data-draw="s-att" data-source="cohort_table" data-field="attendance_pct">—</span></div>
+      <div class="ax-tile"><span class="ax-lens">Tasks completed %</span><span class="ax-big" data-draw="s-tasks" data-source="cohort_table" data-field="task_completion">—</span></div>
+      <div class="ax-tile"><span class="ax-lens">Deadlines met %</span><span class="ax-big" data-draw="s-dead" data-source="cohort_table" data-field="deadline_adherence">—</span></div>
+    </div>
+    <div class="ax-card" id="subjects">
+      <h2>Subjects</h2>
+      <p class="ax-note">Latest figures. Syllabus pace target is 25% per quarter (50% by end of September). Readiness counts stages 3–5 only with a score.</p>
+      <div class="ax-tablewrap">
+        <table data-source="subjects" data-row-key="student_id,subject">
+          <thead><tr><th data-field="subject">Subject</th><th class="n" data-field="syllabus_pct">Syllabus %</th><th class="n" data-field="pace_pct">Pace %</th><th class="n" data-field="readiness">Readiness</th><th class="n" data-field="latest_score">Latest score %</th><th class="n" data-field="target">Target %</th><th class="n" data-field="gap">Gap</th></tr></thead>
+          <tbody data-draw="subject-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="ax-grid2">
+      <div class="ax-card" id="student-minutes">
+        <h2>Counted app minutes per day, by week</h2>
+        <div class="ax-legend"><span><i class="ax-key" style="border-color: var(--ax-s0)"></i>This student</span><span><i class="ax-key ax-key--dash" style="border-color: var(--cds-chart-muted)"></i>All-student average</span></div>
+        <div data-draw="student-trend" data-source="weekly cohort_week" class="ax-chart dash-skeleton"></div>
+      </div>
+      <div class="ax-card" id="student-sleep">
+        <h2>Sleep, hours per night, by week</h2>
+        <p class="ax-note">From Apple Health / Health Connect. The dashed line is 8 hours, the low end of the teen guideline.</p>
+        <p class="ax-note ax-nohealth" hidden>Health data isn't connected for this student. That's a gap for Alcovia to close, not zero sleep.</p>
+        <div data-draw="student-sleep" data-source="weekly" class="ax-chart ax-chart--short dash-skeleton"></div>
+      </div>
+    </div>
+    <div class="ax-grid2">
+      <div class="ax-card" id="soft-skills">
+        <h2>Soft skills, first vs latest workshop</h2>
+        <p class="ax-note">Scored 1–5 by the workshop host.</p>
+        <div class="ax-legend"><span><i class="ax-dot" style="background: var(--cds-chart-muted)"></i>First workshop</span><span><i class="ax-dot" style="background: var(--ax-s0)"></i>Latest workshop</span></div>
+        <div data-draw="soft-skills" data-source="soft_skills" class="ax-chart dash-skeleton"></div>
+      </div>
+      <div class="ax-card" id="milestones">
+        <h2>Milestones</h2>
+        <p class="ax-note">Theme, personal, competition and summer-program milestones from the advisor's notes.</p>
+        <div class="ax-tablewrap">
+          <table data-source="milestones" data-row-key="milestone_id">
+            <thead><tr><th data-field="track">Track</th><th data-field="milestone">Milestone</th><th data-field="month_due">Due</th><th data-field="status">Status</th></tr></thead>
+            <tbody data-draw="milestone-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Parent view -->
+  <section class="ax-section" id="parent" data-page="parent" hidden>
+    <p class="ax-intro">What Alcovia owes the family this quarter, sent as a monthly summary. Shoots and clips are Alcovia's responsibility, so they show as done or not, not as a score for the student.</p>
+    <div class="ax-profile">
+      <span class="ax-name" data-draw="p-name" data-source="students" data-field="student">—</span>
+      <span class="ax-chip ax-chip--theme">Entrepreneurship: <span data-draw="p-startup" data-source="students" data-field="startup">—</span></span>
+    </div>
+    <div class="ax-grid2">
+      <div class="ax-card" id="parent-delivery">
+        <h2>Delivered this quarter</h2>
+        <table data-source="parent_view" data-row-key="student_id,item">
+          <thead><tr><th data-field="item">Item</th><th class="n" data-field="planned">Planned</th><th class="n" data-field="done">Done</th><th data-field="status">Status</th></tr></thead>
+          <tbody data-draw="parent-rows"></tbody>
+        </table>
+      </div>
+      <div class="ax-card" id="parent-academics">
+        <h2>Academics at a glance</h2>
+        <div class="ax-tiles">
+          <div class="ax-tile"><span class="ax-lens">Syllabus done %</span><span class="ax-big" data-draw="p-syl" data-source="cohort_table" data-field="syllabus_pct">—</span><span class="ax-sub">On track: <span data-draw="p-ontrack" data-source="cohort_table" data-field="on_track">—</span></span></div>
+          <div class="ax-tile"><span class="ax-lens">Readiness score</span><span class="ax-big" data-draw="p-ready" data-source="cohort_table" data-field="readiness">—</span></div>
+          <div class="ax-tile"><span class="ax-lens">Attendance %</span><span class="ax-big" data-draw="p-att" data-source="cohort_table" data-field="attendance_pct">—</span></div>
+          <div class="ax-tile"><span class="ax-lens">Counted min/day</span><span class="ax-big" data-draw="p-min" data-source="cohort_table" data-field="counted_min">—</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+// ---------- calculations ----------
+dash.calc('cohort_month', {
+  title: 'All-student averages by month',
+  description: 'Averages of the student monthly figures, the number on track, and the change from the month before.',
+  inputs: ['student_kpis'],
+  fn: (student_kpis) => {
+    const avg = (a, f) => Math.round(10 * a.reduce((s, r) => s + Number(r[f]), 0) / a.length) / 10;
+    const months = [...new Set(student_kpis.map((r) => r.month))].sort();
+    let prev = null;
+    return months.map((month) => {
+      const a = student_kpis.filter((r) => r.month === month);
+      const on = a.filter((r) => r.on_track === 'Yes').length;
+      const row = { month, students: a.length, on_track: on, on_track_pct: Math.round(100 * on / a.length),
+        counted_min: avg(a, 'counted_min'), quiz_participation: avg(a, 'quiz_participation'), syllabus_pct: avg(a, 'syllabus_pct'),
+        readiness: avg(a, 'readiness'), attendance_pct: avg(a, 'attendance_pct') };
+      row.counted_min_change = prev ? Math.round(10 * (row.counted_min - prev.counted_min)) / 10 : null;
+      row.on_track_change = prev ? row.on_track_pct - prev.on_track_pct : null;
+      prev = row;
+      return row;
+    });
+  },
+});
+dash.calc('delivery_month', {
+  title: 'Sessions held and ratings by month',
+  description: 'Totals of planned and held sessions, the rating average weighted by number of ratings, and the change from the month before.',
+  inputs: ['delivery'],
+  fn: (delivery) => {
+    const months = [...new Set(delivery.map((r) => r.month))].sort();
+    let prev = null;
+    return months.map((month) => {
+      const a = delivery.filter((r) => r.month === month && r.planned > 0);
+      const planned = a.reduce((s, r) => s + r.planned, 0);
+      const held = a.reduce((s, r) => s + r.held, 0);
+      const ratings_n = a.reduce((s, r) => s + r.ratings_n, 0);
+      const rating_avg = Math.round(10 * a.reduce((s, r) => s + r.rating_avg * r.ratings_n, 0) / ratings_n) / 10;
+      const response_rate = Math.round(a.reduce((s, r) => s + r.response_rate, 0) / a.length);
+      const row = { month, planned, held, held_pct: Math.round(100 * held / planned), ratings_n, rating_avg, response_rate };
+      row.held_pct_change = prev ? row.held_pct - prev.held_pct : null;
+      prev = row;
+      return row;
+    });
+  },
+});
+dash.calc('cohort_week', {
+  title: 'All-student averages by week',
+  description: 'Average counted minutes per day and average sleep across students, per week.',
+  inputs: ['weekly'],
+  fn: (weekly) => {
+    const weeks = [...new Set(weekly.map((r) => r.week))].sort();
+    return weeks.map((week) => {
+      const a = weekly.filter((r) => r.week === week);
+      const s = a.filter((r) => r.sleep_hrs != null);
+      return { week, counted_min: Math.round(10 * a.reduce((t, r) => t + r.counted_min, 0) / a.length) / 10,
+        sleep_hrs: Math.round(10 * s.reduce((t, r) => t + r.sleep_hrs, 0) / s.length) / 10 };
+    });
+  },
+});
+dash.calc('cohort_table', {
+  title: 'Student figures with names',
+  description: 'Each student\'s monthly figures joined to their name, advisor and startup.',
+  inputs: ['student_kpis', 'students'],
+  fn: (student_kpis, students) => student_kpis.map((r) => {
+    const s = students.find((x) => x.student_id === r.student_id) || {};
+    return { ...r, student: s.student, advisor: s.advisor, startup: s.startup };
+  }),
+});
+dash.calc('alerts_table', {
+  title: 'Alerts with student names',
+  description: 'Each alert joined to the student\'s name.',
+  inputs: ['alerts', 'students'],
+  fn: (alerts, students) => alerts.map((a) => ({ ...a, student: (students.find((s) => s.student_id === a.student_id) || {}).student })),
+});
+
+// ---------- shared helpers ----------
+window.AX = (() => {
+  const TARGET_MIN = 30;
+  const MONTH_LABEL = { '2027-07': 'July 2027', '2027-08': 'August 2027', '2027-09': 'September 2027' };
+  const rows = (id) => { const d = dash.data(id); return d.status === 'ok' ? d.data : null; };
+  const enc = (v) => String(v).replace(/%/g, '%25').replace(/&/g, '%26').replace(/=/g, '%3D');
+  const where = (obj) => Object.entries(obj).map(([k, v]) => `${k}=${enc(v)}`).join('&');
+  const find = (r, obj) => r.find((x) => Object.entries(obj).every(([k, v]) => String(x[k]) === String(v)));
+  const p = () => dash.params();
+  const month = () => p().month || '2027-09';
+  const signed = (v) => (v > 0 ? '+' : '') + v;
+  // one value: sets the mark's row and text; returns the row
+  const value = (el, id, field, w, show = (v) => String(v)) => {
+    const r = rows(id);
+    if (!r) { el.textContent = '—'; return null; }
+    el.setAttribute('data-where', where(w));
+    const row = find(r, w);
+    el.textContent = row && row[field] != null ? show(row[field], row) : '—';
+    return row;
+  };
+  // red / amber / green
+  const rag = {
+    counted_min: (v) => (v >= TARGET_MIN ? 'g' : v >= 20 ? 'a' : 'r'),
+    quiz_participation: (v) => (v >= 80 ? 'g' : v >= 60 ? 'a' : 'r'),
+    syllabus_pct: (v, row) => (v >= row.pace_pct - 2 ? 'g' : v >= row.pace_pct - 8 ? 'a' : 'r'),
+    readiness: (v) => (v >= 70 ? 'g' : v >= 50 ? 'a' : 'r'),
+    attendance_pct: (v) => (v >= 85 ? 'g' : v >= 70 ? 'a' : 'r'),
+    rating_given: (v) => (v >= 4 ? 'g' : v >= 3.5 ? 'a' : 'r'),
+  };
+  const statusClass = { 'Done': 'g', 'On schedule': 'g', 'Actioned': 'g', 'In progress': 'a', 'Slightly behind': 'a', 'Open': 'a', 'Missed': 'r', 'Behind': 'r' };
+  const pill = (td, text, cls) => { const s = document.createElement('span'); s.className = 'ax-pill' + (cls ? ' ax-' + cls : ''); s.textContent = text; td.replaceChildren(s); };
+  const fmtWeek = d3.utcFormat('%b %-d');
+  const css = (name, el) => getComputedStyle(el).getPropertyValue(name).trim();
+  return { TARGET_MIN, MONTH_LABEL, rows, where, find, p, month, signed, value, rag, statusClass, pill, fmtWeek, css };
+})();
+
+// series colour exposed to CSS for the legends
+document.querySelectorAll('.ax').forEach((root) => root.style.setProperty('--ax-s0', dash.colors[0]));
+
+// ---------- controls ----------
+(() => {
+  const pages = ['overview', 'cohort', 'student', 'parent'];
+  const show = (name) => {
+    if (!pages.includes(name)) name = 'overview';
+    document.querySelectorAll('[data-page]').forEach((s) => { s.hidden = s.dataset.page !== name; });
+    document.querySelectorAll('.ax-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    const perStudent = name === 'student' || name === 'parent';
+    document.querySelectorAll('.ax-student-wrap').forEach((w) => { w.hidden = !perStudent; });
+    document.querySelectorAll('.ax-advisor-wrap').forEach((w) => { w.hidden = perStudent; });
+    dash.setLink(name);
+  };
+  document.querySelectorAll('.ax-tab').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+  show(location.hash.slice(1));
+  document.querySelectorAll('.ax-month').forEach((sel) => sel.addEventListener('change', () => dash.setParams({ month: sel.value })));
+  document.querySelectorAll('.ax-advisor').forEach((sel) => sel.addEventListener('change', () => dash.setParams({ advisor: sel.value || null })));
+  dash.onData(() => {
+    const prm = dash.params();
+    document.querySelectorAll('.ax-month').forEach((sel) => { sel.value = prm.month || '2027-09'; });
+    document.querySelectorAll('.ax-advisor').forEach((sel) => { sel.value = prm.advisor || ''; });
+  });
+})();
+</script>
+
+<script>
+// ---------- single values ----------
+(() => {
+  const { value, month, signed, MONTH_LABEL, TARGET_MIN } = window.AX;
+  const one = (name, id, field, show, after) => dash.draw(name, (el) => {
+    const row = value(el, id, field, { month: month() }, show);
+    if (after) after(el, row ? row[field] : null);
+  });
+  const trend = (good) => (el, v) => {
+    el.classList.toggle('ax-up', v != null && (good ? v > 0 : v < 0));
+    el.classList.toggle('ax-down', v != null && (good ? v < 0 : v > 0));
+  };
+  dash.draw('lede-month', (el) => { el.textContent = MONTH_LABEL[month()] || '—'; });
+  dash.draw('target-min', (el) => { el.textContent = String(TARGET_MIN); });
+  one('lede-held', 'delivery_month', 'held_pct', (v) => v + '%');
+  one('lede-rating', 'delivery_month', 'rating_avg', (v) => v.toFixed(1));
+  one('lede-ontrack', 'cohort_month', 'on_track');
+  one('lede-n', 'cohort_month', 'students');
+  one('t-held', 'delivery_month', 'held_pct');
+  one('t-held-n', 'delivery_month', 'held');
+  one('t-planned-n', 'delivery_month', 'planned');
+  one('t-held-ch', 'delivery_month', 'held_pct_change', signed, trend(true));
+  one('t-rating', 'delivery_month', 'rating_avg', (v) => v.toFixed(1));
+  one('t-ratings-n', 'delivery_month', 'ratings_n', d3.format(','));
+  one('t-response', 'delivery_month', 'response_rate');
+  one('t-ontrack', 'cohort_month', 'on_track_pct');
+  one('t-ontrack-n', 'cohort_month', 'on_track');
+  one('t-students-n', 'cohort_month', 'students');
+  one('t-ontrack-ch', 'cohort_month', 'on_track_change', signed, trend(true));
+  one('t-minutes', 'cohort_month', 'counted_min', (v) => v.toFixed(1));
+  one('t-minutes-ch', 'cohort_month', 'counted_min_change', (v) => signed(Math.round(v * 10) / 10), trend(true));
+  one('c-min', 'cohort_month', 'counted_min', (v) => v.toFixed(1));
+  one('c-quiz', 'cohort_month', 'quiz_participation');
+  one('c-syl', 'cohort_month', 'syllabus_pct');
+  one('c-ready', 'cohort_month', 'readiness');
+  one('c-att', 'cohort_month', 'attendance_pct');
+
+  // per student
+  const sid = () => dash.params().student || 'S01';
+  const stu = (name, field) => dash.draw(name, (el) => { value(el, 'students', field, { student_id: sid() }); });
+  ['s-name', 'p-name'].forEach((n) => stu(n, 'student'));
+  stu('s-advisor', 'advisor');
+  ['s-startup', 'p-startup'].forEach((n) => stu(n, 'startup'));
+  stu('s-career', 'career_roadmap');
+  const kpi = (name, field) => dash.draw(name, (el) => { value(el, 'cohort_table', field, { month: month(), student_id: sid() }); });
+  [['s-min', 'counted_min'], ['s-quiz', 'quiz_accuracy'], ['s-ready', 'readiness'], ['s-att', 'attendance_pct'], ['s-tasks', 'task_completion'], ['s-dead', 'deadline_adherence'],
+   ['p-syl', 'syllabus_pct'], ['p-ontrack', 'on_track'], ['p-ready', 'readiness'], ['p-att', 'attendance_pct'], ['p-min', 'counted_min']].forEach(([n, f]) => kpi(n, f));
+
+  dash.draw('student-select', (sel) => {
+    const d = dash.data('students');
+    const list = d.status === 'ok' ? d.data : [];
+    sel.replaceChildren(...list.map((s) => new Option(`${s.student} (${s.advisor})`, s.student_id)));
+    sel.value = sid();
+    sel.onchange = () => dash.setParams({ student: sel.value });
+  });
+})();
+</script>
+
+<script>
+// ---------- tables ----------
+(() => {
+  const { rows, month, rag, statusClass, pill } = window.AX;
+  const td = (tr, text, cls) => { const c = tr.insertCell(); c.textContent = text; if (cls) c.className = cls; return c; };
+  const keyOf = (...parts) => parts.map((v) => String(v).replace(/%/g, '%25').replace(/,/g, '%2C')).join(',');
+
+  dash.draw('quality-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('delivery'); if (!r) return;
+    r.filter((x) => x.month === month() && x.planned > 0).sort((a, b) => a.rating_avg - b.rating_avg).forEach((x) => {
+      const tr = tb.insertRow(); tr.dataset.key = keyOf(x.month, x.item);
+      td(tr, x.item); td(tr, x.level);
+      pill(td(tr, '', 'n'), x.rating_avg.toFixed(1), x.rating_avg >= 4 ? 'g' : x.rating_avg >= 3.5 ? 'a' : 'r');
+      td(tr, String(x.ratings_n), 'n'); td(tr, x.response_rate == null ? '—' : String(x.response_rate), 'n'); td(tr, x.attendance_pct == null ? '—' : String(x.attendance_pct), 'n');
+    });
+  });
+
+  const cols = ['counted_min', 'quiz_participation', 'syllabus_pct', 'pace_pct', 'readiness', 'attendance_pct', 'rating_given'];
+  dash.draw('cohort-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('cohort_table'); if (!r) return;
+    const adv = dash.params().advisor;
+    const list = r.filter((x) => x.month === month() && (!adv || x.advisor === adv)).map((x) => {
+      const c = {}; let reds = 0, ambers = 0;
+      Object.keys(rag).forEach((f) => { c[f] = rag[f](x[f], x); if (c[f] === 'r') reds++; if (c[f] === 'a') ambers++; });
+      return { x, c, score: reds * 10 + ambers };
+    }).sort((a, b) => b.score - a.score || a.x.counted_min - b.x.counted_min);
+    list.forEach(({ x, c }) => {
+      const tr = tb.insertRow(); tr.dataset.key = keyOf(x.month, x.student_id);
+      td(tr, x.student); td(tr, x.advisor); td(tr, x.startup);
+      cols.forEach((f) => {
+        const cell = td(tr, '', 'n');
+        const v = f === 'counted_min' ? x[f].toFixed(1) : f === 'rating_given' ? x[f].toFixed(1) : String(x[f]);
+        if (c[f]) pill(cell, v, c[f]); else cell.textContent = v;
+      });
+    });
+  });
+
+  dash.draw('alert-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('alerts_table'); if (!r) return;
+    const adv = dash.params().advisor;
+    r.filter((x) => x.month === month() && (!adv || x.advisor === adv)).sort((a, b) => b.date.localeCompare(a.date)).forEach((x) => {
+      const tr = tb.insertRow(); tr.dataset.key = x.alert_id;
+      td(tr, d3.utcFormat('%b %-d')(new Date(x.date))); td(tr, x.student); td(tr, x.type); td(tr, x.detail);
+      pill(td(tr, ''), x.status, statusClass[x.status]);
+    });
+  });
+
+  const sid = () => dash.params().student || 'S01';
+  dash.draw('subject-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('subjects'); if (!r) return;
+    r.filter((x) => x.student_id === sid()).forEach((x) => {
+      const tr = tb.insertRow(); tr.dataset.key = keyOf(x.student_id, x.subject);
+      td(tr, x.subject);
+      pill(td(tr, '', 'n'), String(x.syllabus_pct), rag.syllabus_pct(x.syllabus_pct, x));
+      td(tr, String(x.pace_pct), 'n');
+      pill(td(tr, '', 'n'), String(x.readiness), rag.readiness(x.readiness));
+      td(tr, String(x.latest_score), 'n'); td(tr, String(x.target), 'n');
+      pill(td(tr, '', 'n'), (x.gap > 0 ? '+' : x.gap < 0 ? '−' : '') + Math.abs(x.gap), x.gap >= 0 ? 'g' : x.gap >= -5 ? 'a' : 'r');
+    });
+  });
+
+  dash.draw('milestone-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('milestones'); if (!r) return;
+    r.filter((x) => x.student_id === sid()).forEach((x) => {
+      const tr = tb.insertRow(); tr.dataset.key = x.milestone_id;
+      td(tr, x.track); td(tr, x.milestone); td(tr, d3.utcFormat('%b %Y')(new Date(x.month_due + '-01')));
+      pill(td(tr, ''), x.status, statusClass[x.status]);
+    });
+  });
+
+  dash.draw('parent-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('parent_view'); if (!r) return;
+    r.filter((x) => x.student_id === sid()).forEach((x) => {
+      const tr = tb.insertRow(); tr.dataset.key = keyOf(x.student_id, x.item);
+      td(tr, x.item); td(tr, String(x.planned), 'n'); td(tr, String(x.done), 'n');
+      pill(td(tr, ''), x.status, statusClass[x.status]);
+    });
+  });
+})();
+</script>
+
+<script>
+// ---------- charts ----------
+(() => {
+  const { rows, month, MONTH_LABEL, TARGET_MIN, fmtWeek, css } = window.AX;
+  const sid = () => dash.params().student || 'S01';
+
+  // delivery grid: items × months
+  dash.draw('delivery-grid', (el) => {
+    el.replaceChildren();
+    const r = rows('delivery');
+    if (!r) { el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    const months = [...new Set(r.map((x) => x.month))].sort();
+    const grid = document.createElement('div'); grid.className = 'ax-hm';
+    const add = (cls, text) => { const d = document.createElement('div'); d.className = cls; d.textContent = text; grid.appendChild(d); return d; };
+    add('ax-hm-h', 'Item');
+    months.forEach((m) => add('ax-hm-h', d3.utcFormat('%b')(new Date(m + '-01'))));
+    ['Day', 'Week', 'Month', 'Quarter'].forEach((lvl) => {
+      const items = [...new Set(r.filter((x) => x.level === lvl).map((x) => x.item))];
+      if (!items.length) return;
+      add('ax-hm-lvl', lvl);
+      items.forEach((it) => {
+        add('ax-hm-l', it);
+        months.forEach((m) => {
+          const x = r.find((y) => y.month === m && y.item === it);
+          const c = add('ax-hm-c', !x || !x.planned ? '—' : `${x.held}/${x.planned}`);
+          if (!x || !x.planned) c.classList.add('ax-none');
+          else c.classList.add(x.held_pct >= 100 ? 'ax-g' : x.held_pct >= 85 ? 'ax-a' : 'ax-r');
+          if (m === month()) c.classList.add('ax-sel');
+        });
+      });
+    });
+    el.appendChild(grid);
+  });
+
+  // generic line chart
+  const lineChart = (el, series, opt) => {
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+    const W = Math.max(280, el.clientWidth), H = opt.height || 220;
+    const all = series.flatMap((s) => s.points);
+    if (!all.length) return;
+    const x = d3.scaleUtc(d3.extent(all, (d) => d.x), [0, 1]);
+    const yMax = Math.max(opt.yMin != null ? opt.yMin : 0, d3.max(all, (d) => d.y), opt.ref || 0);
+    const y = d3.scaleLinear([opt.yFloor || 0, yMax * 1.08], [H - 24, 8]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', opt.label);
+    const gy = svg.append('g').call(d3.axisLeft(y).ticks(4).tickSize(0).tickFormat(opt.fmtY || d3.format('d'))).attr('font-size', null).attr('font-family', null);
+    gy.select('.domain').remove();
+    gy.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+    let left = 0; gy.selectAll('text').each(function () { left = Math.max(left, this.getComputedTextLength()); });
+    left += 10;
+    const right = opt.endLabel ? 12 : 8;
+    x.range([left, W - right]);
+    gy.attr('transform', `translate(${left - 6},0)`);
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(4)).join('line')
+      .attr('x1', left).attr('x2', W - right).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 1);
+    const gx = svg.append('g').attr('transform', `translate(0,${H - 24})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.floor((W - left) / 90))).tickSize(0).tickPadding(8).tickFormat(fmtWeek)).attr('font-size', null).attr('font-family', null);
+    gx.select('.domain').attr('stroke', 'var(--cds-chart-axis)');
+    gx.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+    if (opt.ref != null) {
+      svg.append('line').attr('x1', left).attr('x2', W - right).attr('y1', y(opt.ref)).attr('y2', y(opt.ref))
+        .attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 4');
+    }
+    const line = d3.line().defined((d) => d.y != null).x((d) => x(d.x)).y((d) => y(d.y));
+    series.forEach((s) => {
+      svg.append('path').datum(s.points).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2)
+        .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('stroke-dasharray', s.dashed ? '5 4' : null).attr('d', line);
+    });
+    // hover
+    const tip = document.createElement('div'); tip.className = 'ax-tip'; tip.hidden = true; el.appendChild(tip);
+    const dots = series.map((s) => svg.append('circle').attr('r', 4).attr('fill', s.color).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2).attr('visibility', 'hidden'));
+    const rule = svg.append('line').attr('y1', 8).attr('y2', H - 24).attr('stroke', 'var(--cds-chart-axis)').attr('visibility', 'hidden');
+    const xs = series[0].points.map((d) => d.x);
+    svg.append('rect').attr('x', left).attr('y', 0).attr('width', W - right - left).attr('height', H - 24).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const [mx] = d3.pointer(ev);
+        const t = x.invert(mx);
+        let i = d3.bisector((d) => d).center(xs, t);
+        const at = xs[i];
+        rule.attr('x1', x(at)).attr('x2', x(at)).attr('visibility', 'visible');
+        const head = document.createElement('div'); head.className = 'ax-tip-h'; head.textContent = 'Week of ' + fmtWeek(at);
+        const lines = series.map((s, k) => {
+          const p = s.points.find((d) => +d.x === +at);
+          if (!p || p.y == null) { dots[k].attr('visibility', 'hidden'); return null; }
+          dots[k].attr('cx', x(at)).attr('cy', y(p.y)).attr('visibility', 'visible');
+          const ln = document.createElement('div');
+          if (series.length > 1) { const sw = document.createElement('span'); sw.className = 'ax-sw'; sw.style.background = s.color; ln.appendChild(sw); }
+          ln.appendChild(document.createTextNode(`${s.name}: ${opt.fmtTip(p.y)}`));
+          return ln;
+        }).filter(Boolean);
+        tip.replaceChildren(head, ...lines);
+        tip.hidden = false;
+        const box = el.getBoundingClientRect();
+        const px = (x(at) / W) * box.width;
+        const tw = tip.offsetWidth;
+        tip.style.left = Math.min(Math.max(0, px + 12), box.width - tw) + 'px';
+        tip.style.top = '4px';
+      })
+      .on('pointerleave', () => { tip.hidden = true; rule.attr('visibility', 'hidden'); dots.forEach((d) => d.attr('visibility', 'hidden')); });
+  };
+
+  dash.draw('cohort-trend', (el) => {
+    const r = rows('cohort_week');
+    if (!r) { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    lineChart(el, [{ name: 'All-student average', color: dash.colors[0], points: r.map((d) => ({ x: new Date(d.week), y: d.counted_min })) }],
+      { label: 'Average counted minutes per day by week', ref: TARGET_MIN, fmtTip: (v) => v.toFixed(1) + ' min' });
+  });
+
+  dash.draw('student-trend', (el) => {
+    const w = rows('weekly'), c = rows('cohort_week');
+    if (!w || !c) { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    const mine = w.filter((d) => d.student_id === sid());
+    lineChart(el, [
+      { name: 'This student', color: dash.colors[0], points: mine.map((d) => ({ x: new Date(d.week), y: d.counted_min })) },
+      { name: 'All-student average', color: css('--cds-chart-muted', el) || 'gray', dashed: true, points: c.map((d) => ({ x: new Date(d.week), y: d.counted_min })) },
+    ], { label: 'Counted minutes per day, this student vs all students', fmtTip: (v) => v.toFixed(1) + ' min' });
+  });
+
+  dash.draw('student-sleep', (el) => {
+    const w = rows('weekly');
+    if (!w) { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    const mine = w.filter((d) => d.student_id === sid());
+    const connected = mine.some((d) => d.sleep_hrs != null);
+    el.closest('.ax-card').querySelectorAll('.ax-nohealth').forEach((n) => { n.hidden = connected; });
+    if (!connected) { el.replaceChildren(); el.classList.remove('dash-skeleton'); return; }
+    lineChart(el, [{ name: 'Sleep', color: dash.colors[1], points: mine.map((d) => ({ x: new Date(d.week), y: d.sleep_hrs })) }],
+      { label: 'Average sleep hours per night by week', height: 180, ref: 8, yFloor: 5, fmtY: d3.format('d'), fmtTip: (v) => v.toFixed(1) + ' h' });
+  });
+
+  // soft skills: first vs latest dumbbell
+  dash.draw('soft-skills', (el) => {
+    el.replaceChildren();
+    const r = rows('soft_skills');
+    if (!r) { el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    const mine = r.filter((d) => d.student_id === sid());
+    const W = Math.max(280, el.clientWidth), rowH = 36, H = mine.length * rowH + 28;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Soft-skill scores, first and latest workshop');
+    const labels = svg.append('g');
+    mine.forEach((d, i) => labels.append('text').attr('x', 0).attr('y', i * rowH + rowH / 2 + 4).attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)').text(d.skill));
+    let left = 0; labels.selectAll('text').each(function () { left = Math.max(left, this.getComputedTextLength()); });
+    left += 16;
+    const x = d3.scaleLinear([1, 5], [left, W - 12]);
+    const gx = svg.append('g').attr('transform', `translate(0,${H - 22})`).call(d3.axisBottom(x).ticks(5).tickSize(0).tickPadding(6).tickFormat(d3.format('d'))).attr('font-size', null).attr('font-family', null);
+    gx.select('.domain').attr('stroke', 'var(--cds-chart-axis)');
+    gx.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+    svg.insert('g', ':first-child').selectAll('line').data([1, 2, 3, 4, 5]).join('line').attr('x1', x).attr('x2', x).attr('y1', 0).attr('y2', H - 22).attr('stroke', 'var(--cds-chart-grid)');
+    const muted = css('--cds-chart-muted', el) || 'gray';
+    const tip = document.createElement('div'); tip.className = 'ax-tip'; tip.hidden = true; el.appendChild(tip);
+    mine.forEach((d, i) => {
+      const cy = i * rowH + rowH / 2;
+      const g = svg.append('g');
+      g.append('line').attr('x1', x(d.first_workshop)).attr('x2', x(d.latest_workshop)).attr('y1', cy).attr('y2', cy).attr('stroke', muted).attr('stroke-width', 2);
+      g.append('circle').attr('cx', x(d.first_workshop)).attr('cy', cy).attr('r', 5).attr('fill', muted).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2);
+      g.append('circle').attr('cx', x(d.latest_workshop)).attr('cy', cy).attr('r', 6).attr('fill', dash.colors[0]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2);
+      g.append('rect').attr('x', left).attr('y', cy - rowH / 2).attr('width', W - 12 - left).attr('height', rowH).attr('fill', 'transparent')
+        .on('pointermove', () => {
+          const h = document.createElement('div'); h.className = 'ax-tip-h'; h.textContent = d.skill;
+          const a = document.createElement('div'); a.textContent = `First workshop: ${d.first_workshop.toFixed(1)}`;
+          const b = document.createElement('div'); b.textContent = `Latest workshop: ${d.latest_workshop.toFixed(1)}`;
+          tip.replaceChildren(h, a, b); tip.hidden = false;
+          const box = el.getBoundingClientRect();
+          tip.style.left = Math.min((x(d.latest_workshop) / W) * box.width + 12, box.width - tip.offsetWidth) + 'px';
+          tip.style.top = ((cy + rowH / 2) / H) * box.height + 'px';
+        })
+        .on('pointerleave', () => { tip.hidden = true; });
+    });
+  });
+})();
+</script>
+
+<p class="ax-foot">Example dashboard for Problem 4. All figures are made-up sample data for 20 fictional students (Jul–Sep 2027). In production this runs on Metabase over the reporting database.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,848 @@
+{
+  "name": "Alcovia student dashboard",
+  "description": "P4 · sample data, made up for illustration. Every card is a section of a KPI file from sql/kpis/p4_student_dashboard.",
+  "parameters": [
+    {
+      "id": "p-month",
+      "name": "Month",
+      "slug": "month",
+      "type": "date/single",
+      "default": "2027-09-01"
+    }
+  ],
+  "tabs": [
+    {
+      "id": 19,
+      "dashboard_id": 3,
+      "name": "Day",
+      "position": 0,
+      "entity_id": "PcZmRVl-7dNY2ZXcW4XCz",
+      "created_at": "2026-11-09T06:23:33.77497Z",
+      "updated_at": "2026-11-09T06:23:33.77497Z"
+    },
+    {
+      "id": 20,
+      "dashboard_id": 3,
+      "name": "Week",
+      "position": 1,
+      "entity_id": "_8DuCmT5gKkOlOvVPeapd",
+      "created_at": "2026-11-09T06:23:33.77497Z",
+      "updated_at": "2026-11-09T06:23:33.77497Z"
+    },
+    {
+      "id": 21,
+      "dashboard_id": 3,
+      "name": "Month",
+      "position": 2,
+      "entity_id": "O4U_tIKxOoGLeooYb6b2Q",
+      "created_at": "2026-11-09T06:23:33.77497Z",
+      "updated_at": "2026-11-09T06:23:33.77497Z"
+    },
+    {
+      "id": 22,
+      "dashboard_id": 3,
+      "name": "Quarter",
+      "position": 3,
+      "entity_id": "cnAfs-qqzuUERIqSonaya",
+      "created_at": "2026-11-09T06:23:33.77497Z",
+      "updated_at": "2026-11-09T06:23:33.77497Z"
+    },
+    {
+      "id": 23,
+      "dashboard_id": 3,
+      "name": "Roadmap",
+      "position": 4,
+      "entity_id": "ogJG3YqA0TgDxhwxSGhAB",
+      "created_at": "2026-11-09T06:23:33.77497Z",
+      "updated_at": "2026-11-09T06:23:33.77497Z"
+    }
+  ],
+  "cards": [
+    {
+      "tab": 19,
+      "row": 0,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "01 · Timetable management · Quantity: students with a timetable updated, per week",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "week"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "pct"
+        ]
+      },
+      "sql": "-- P4 KPI 1: Timetable management  (Day)\n-- Collection  : Automatic · 1-tap weekly pulse\n-- Quantity    : % of students with an advisor-built weekly timetable, updated this week\n-- Quality     : \"Did your timetable work this week?\" (1–5)\n-- Performance : Timetable adherence: % of planned self-study slots that had a linked focus session\n-- Source      : Advisor portal · Student app\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), active AS (SELECT sm.student_id FROM students.student_month sm, m WHERE sm.month = m.s),\nweeks AS (SELECT w::date AS week FROM m, generate_series(date_trunc('week', m.s), m.e, interval '7 days') w)\nSELECT weeks.week,\n       COUNT(DISTINCT ts.student_id) AS students_updated,\n       (SELECT COUNT(*) FROM active) AS students,\n       round(100.0 * COUNT(DISTINCT ts.student_id) / (SELECT COUNT(*) FROM active)) AS pct\nFROM weeks LEFT JOIN students.timetable_slots ts ON ts.created_on = weeks.week\nGROUP BY weeks.week ORDER BY weeks.week"
+    },
+    {
+      "tab": 19,
+      "row": 0,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "01 · Timetable management · Quality: timetable pulse",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 1: Timetable management  (Day)\n-- Collection  : Automatic · 1-tap weekly pulse\n-- Quantity    : % of students with an advisor-built weekly timetable, updated this week\n-- Quality     : \"Did your timetable work this week?\" (1–5)\n-- Performance : Timetable adherence: % of planned self-study slots that had a linked focus session\n-- Source      : Advisor portal · Student app\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT round(AVG(answer), 1) AS avg_answer, COUNT(*) AS responses\nFROM students.pulse_responses, m\nWHERE question = 'Did your timetable work this week?' AND asked_on BETWEEN m.s AND m.e"
+    },
+    {
+      "tab": 19,
+      "row": 6,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "01 · Timetable management · Performance: timetable adherence",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 1: Timetable management  (Day)\n-- Collection  : Automatic · 1-tap weekly pulse\n-- Quantity    : % of students with an advisor-built weekly timetable, updated this week\n-- Quality     : \"Did your timetable work this week?\" (1–5)\n-- Performance : Timetable adherence: % of planned self-study slots that had a linked focus session\n-- Source      : Advisor portal · Student app\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT COUNT(*) AS planned_slots,\n       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM students.app_sessions a WHERE a.linked_slot_id = ts.slot_id)) AS slots_with_linked_focus,\n       round(100.0 * COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM students.app_sessions a WHERE a.linked_slot_id = ts.slot_id)) / NULLIF(COUNT(*), 0)) AS adherence_pct\nFROM students.timetable_slots ts, m\nWHERE ts.slot_date BETWEEN m.s AND m.e"
+    },
+    {
+      "tab": 19,
+      "row": 6,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "02 · Daily 8 PM quiz · Quantity: quizzes published (held of days) and rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 2: Daily 8 PM quiz  (Day)\n-- Collection  : Automatic · 1-tap rating\n-- Quantity    : Quizzes published at 8 PM ÷ days in period\n-- Quality     : Rating at the end of each quiz\n-- Performance : Participation (% of students who took it) · accuracy % · trend per topic\n-- Source      : Student app\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), m\nWHERE t.name = '8 PM quiz' AND d.month BETWEEN m.s AND m.e AND d.planned > 0"
+    },
+    {
+      "tab": 19,
+      "row": 10,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "02 · Daily 8 PM quiz · Performance: participation and accuracy (monthly summary)",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 2: Daily 8 PM quiz  (Day)\n-- Collection  : Automatic · 1-tap rating\n-- Quantity    : Quizzes published at 8 PM ÷ days in period\n-- Quality     : Rating at the end of each quiz\n-- Performance : Participation (% of students who took it) · accuracy % · trend per topic\n-- Source      : Student app\n-- Access      : full_access, team_access\n\nSELECT round(AVG(quiz_participation_pct), 1) AS participation_pct, round(AVG(quiz_accuracy_pct), 1) AS accuracy_pct\nFROM students.student_month WHERE month = {{month}}::date"
+    },
+    {
+      "tab": 19,
+      "row": 10,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "02 · Daily 8 PM quiz · Performance: accuracy by topic",
+      "display": "row",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "topic"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "accuracy_pct"
+        ]
+      },
+      "sql": "-- P4 KPI 2: Daily 8 PM quiz  (Day)\n-- Collection  : Automatic · 1-tap rating\n-- Quantity    : Quizzes published at 8 PM ÷ days in period\n-- Quality     : Rating at the end of each quiz\n-- Performance : Participation (% of students who took it) · accuracy % · trend per topic\n-- Source      : Student app\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), ev AS (SELECT e.* FROM events.events e JOIN events.event_types t USING (event_type_id), m WHERE t.name = '8 PM quiz' AND e.held_on BETWEEN m.s AND m.e)\nSELECT qa.topic, COUNT(*) AS attempts, round(AVG(qa.score_pct), 1) AS accuracy_pct\nFROM ev JOIN students.quiz_attempts qa USING (event_id)\nGROUP BY qa.topic ORDER BY accuracy_pct"
+    },
+    {
+      "tab": 19,
+      "row": 16,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "03 · Focus time · Quantity: plan pushed to the app",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 3: Focus time  (Day)\n-- Collection  : Automatic\n-- Quantity    : % of students with the advisor's plan pushed to the app (so linked focus is possible)\n-- Quality     : Voluntary repeat use: % of students running focus on ≥5 days a week\n-- Performance : Counted minutes per day vs. the 30-min target · streak length\n-- Source      : Student app · Advisor portal\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), active AS (SELECT sm.student_id FROM students.student_month sm, m WHERE sm.month = m.s)\nSELECT COUNT(DISTINCT ts.student_id) AS students_with_plan, (SELECT COUNT(*) FROM active) AS students,\n       round(100.0 * COUNT(DISTINCT ts.student_id) / (SELECT COUNT(*) FROM active)) AS pct\nFROM students.timetable_slots ts, m WHERE ts.slot_date BETWEEN m.s AND m.e"
+    },
+    {
+      "tab": 19,
+      "row": 16,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "03 · Focus time · Quality: voluntary repeat use (student-weeks with focus on 5+ days)",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 3: Focus time  (Day)\n-- Collection  : Automatic\n-- Quantity    : % of students with the advisor's plan pushed to the app (so linked focus is possible)\n-- Quality     : Voluntary repeat use: % of students running focus on ≥5 days a week\n-- Performance : Counted minutes per day vs. the 30-min target · streak length\n-- Source      : Student app · Advisor portal\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e),\nwk AS (SELECT student_id, date_trunc('week', started_at)::date AS week, COUNT(DISTINCT started_at::date) AS focus_days\n       FROM students.app_sessions, m WHERE kind = 'Focus' AND started_at::date BETWEEN m.s AND m.e GROUP BY 1, 2)\nSELECT COUNT(*) FILTER (WHERE focus_days >= 5) AS student_weeks_5_plus, COUNT(*) AS student_weeks,\n       round(100.0 * COUNT(*) FILTER (WHERE focus_days >= 5) / NULLIF(COUNT(*), 0)) AS pct\nFROM wk"
+    },
+    {
+      "tab": 19,
+      "row": 20,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "03 · Focus time · Performance: counted minutes per day (study + quiz + games capped at half of study and quiz; monthly summary)",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 3: Focus time  (Day)\n-- Collection  : Automatic\n-- Quantity    : % of students with the advisor's plan pushed to the app (so linked focus is possible)\n-- Quality     : Voluntary repeat use: % of students running focus on ≥5 days a week\n-- Performance : Counted minutes per day vs. the 30-min target · streak length\n-- Source      : Student app · Advisor portal\n-- Access      : full_access, team_access\n\nSELECT round(AVG(counted_min), 1) AS counted_min_per_day, 30 AS target,\n       COUNT(*) FILTER (WHERE counted_min >= 30) AS students_at_target, COUNT(*) AS students\nFROM students.student_month WHERE month = {{month}}::date"
+    },
+    {
+      "tab": 19,
+      "row": 20,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "03 · Focus time · Performance: longest focus streak per student (days in a row)",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 3: Focus time  (Day)\n-- Collection  : Automatic\n-- Quantity    : % of students with the advisor's plan pushed to the app (so linked focus is possible)\n-- Quality     : Voluntary repeat use: % of students running focus on ≥5 days a week\n-- Performance : Counted minutes per day vs. the 30-min target · streak length\n-- Source      : Student app · Advisor portal\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e),\nd AS (SELECT DISTINCT student_id, started_at::date AS day FROM students.app_sessions, m WHERE kind = 'Focus' AND started_at::date BETWEEN m.s AND m.e),\ng AS (SELECT student_id, day - (ROW_NUMBER() OVER (PARTITION BY student_id ORDER BY day))::int AS grp FROM d),\nstreaks AS (SELECT student_id, COUNT(*) AS streak FROM g GROUP BY student_id, grp)\nSELECT round(AVG(best), 1) AS avg_longest_streak, MAX(best) AS best_streak\nFROM (SELECT student_id, MAX(streak) AS best FROM streaks GROUP BY student_id) s"
+    },
+    {
+      "tab": 19,
+      "row": 26,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "04 · Active minutes · Quantity: health data connected",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 4: Active minutes  (Day)\n-- Collection  : Automatic (one-time permission)\n-- Quantity    : % of students with health data connected\n-- Quality     : Not rated: passive data\n-- Performance : Days with ≥60 active minutes\n-- Source      : Apple Health / Health Connect via the app\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE health_connected) AS connected, COUNT(*) AS students,\n       round(100.0 * COUNT(*) FILTER (WHERE health_connected) / COUNT(*)) AS pct\nFROM students.students WHERE student_id IN (SELECT student_id FROM students.student_month)"
+    },
+    {
+      "tab": 19,
+      "row": 26,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "04 · Active minutes · Performance: days with 60+ active minutes (monthly summary)",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 4: Active minutes  (Day)\n-- Collection  : Automatic (one-time permission)\n-- Quantity    : % of students with health data connected\n-- Quality     : Not rated: passive data\n-- Performance : Days with ≥60 active minutes\n-- Source      : Apple Health / Health Connect via the app\n-- Access      : full_access, team_access\n\nSELECT round(AVG(active_days_pct), 1) AS pct_days_60_plus, COUNT(active_days_pct) AS students_measured\nFROM students.student_month WHERE month = {{month}}::date"
+    },
+    {
+      "tab": 19,
+      "row": 30,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "05 · Active recovery (sleep) · Performance: sleep",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 5: Active recovery (sleep)  (Day)\n-- Collection  : Automatic (one-time permission)\n-- Quantity    : Same connection rate as active minutes\n-- Quality     : Not rated: passive data\n-- Performance : Average sleep hours vs. 8–10 h (teen guideline) · nights below 7 h\n-- Source      : Apple Health / Health Connect via the app\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT (SELECT round(AVG(sleep_hrs), 1) FROM students.student_month WHERE month = m.s) AS avg_sleep_hrs,   -- monthly summary\n       '8–10' AS guideline,\n       COUNT(*) FILTER (WHERE sleep_hrs < 7) AS nights_below_7h, COUNT(*) AS nights,                          -- daily health data\n       round(100.0 * COUNT(*) FILTER (WHERE sleep_hrs < 7) / NULLIF(COUNT(*), 0)) AS pct_below_7h\nFROM students.health_daily, m WHERE day BETWEEN m.s AND m.e\nGROUP BY m.s"
+    },
+    {
+      "tab": 20,
+      "row": 0,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "06 · Weekly advisor session · Quantity and quality: sessions held of planned, student rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 6: Weekly advisor session  (Week)\n-- Collection  : Host closes event · advisor notes\n-- Quantity    : Sessions held ÷ planned, per student\n-- Quality     : Student rating after the session (1–5)\n-- Performance : Actions agreed last week that were completed\n-- Source      : Event system · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), m\nWHERE t.name = 'Advisor session' AND d.month BETWEEN m.s AND m.e AND d.planned > 0"
+    },
+    {
+      "tab": 20,
+      "row": 0,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "06 · Weekly advisor session · Quantity: per student",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 6: Weekly advisor session  (Week)\n-- Collection  : Host closes event · advisor notes\n-- Quantity    : Sessions held ÷ planned, per student\n-- Quality     : Student rating after the session (1–5)\n-- Performance : Actions agreed last week that were completed\n-- Source      : Event system · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), ev AS (SELECT e.* FROM events.events e JOIN events.event_types t USING (event_type_id), m WHERE t.name = 'Advisor session' AND e.held_on BETWEEN m.s AND m.e)\nSELECT a.student_id, COUNT(*) AS planned, COUNT(*) FILTER (WHERE ev.status = 'Held') AS held\nFROM ev JOIN events.event_attendance a USING (event_id) GROUP BY a.student_id\nUNION ALL\nSELECT '(not held, no attendee)', COUNT(*), 0 FROM ev WHERE status <> 'Held'\nORDER BY held, student_id"
+    },
+    {
+      "tab": 20,
+      "row": 6,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "06 · Weekly advisor session · Performance: agreed actions completed",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 6: Weekly advisor session  (Week)\n-- Collection  : Host closes event · advisor notes\n-- Quantity    : Sessions held ÷ planned, per student\n-- Quality     : Student rating after the session (1–5)\n-- Performance : Actions agreed last week that were completed\n-- Source      : Event system · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), ev AS (SELECT e.* FROM events.events e JOIN events.event_types t USING (event_type_id), m WHERE t.name = 'Advisor session' AND e.held_on BETWEEN m.s AND m.e)\nSELECT COUNT(*) AS actions_agreed, COUNT(f.completed_on) AS completed,\n       round(100.0 * COUNT(f.completed_on) / NULLIF(COUNT(*), 0)) AS completed_pct\nFROM ev JOIN events.event_follow_ups f USING (event_id)"
+    },
+    {
+      "tab": 20,
+      "row": 6,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "07 · Score targets (Formative, unit test, half-yearly) · Quantity: students with every target set, and all confirmed by parents",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 7: Score targets (Formative, unit test, half-yearly)  (Week)\n-- Collection  : Automatic · advisor notes\n-- Quantity    : % of students with targets set for every subject and exam type, and aligned with parents\n-- Quality     : Parent confirmation of targets (yes / no)\n-- Performance : Actual vs. target per exam · % of subjects at or above target\n-- Source      : Advisor portal · Student app · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nWITH per AS (\n    SELECT s.student_id, COUNT(t.*) AS targets_set, COUNT(*) FILTER (WHERE t.parent_confirmed) AS confirmed\n    FROM students.students s LEFT JOIN students.score_targets t USING (student_id)\n    WHERE s.student_id IN (SELECT student_id FROM students.student_month) GROUP BY s.student_id)\nSELECT COUNT(*) FILTER (WHERE targets_set = 15)                    AS all_targets_set,\n       COUNT(*) FILTER (WHERE targets_set = 15 AND confirmed = 15) AS all_set_and_parent_aligned,\n       COUNT(*)                                                    AS students\nFROM per;   -- 5 subjects × 3 exam types = 15"
+    },
+    {
+      "tab": 20,
+      "row": 10,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "07 · Score targets (Formative, unit test, half-yearly) · Quality: parent confirmation",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 7: Score targets (Formative, unit test, half-yearly)  (Week)\n-- Collection  : Automatic · advisor notes\n-- Quantity    : % of students with targets set for every subject and exam type, and aligned with parents\n-- Quality     : Parent confirmation of targets (yes / no)\n-- Performance : Actual vs. target per exam · % of subjects at or above target\n-- Source      : Advisor portal · Student app · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE parent_confirmed) AS confirmed, COUNT(*) AS targets,\n       round(100.0 * COUNT(*) FILTER (WHERE parent_confirmed) / COUNT(*)) AS pct\nFROM students.score_targets"
+    },
+    {
+      "tab": 20,
+      "row": 10,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "07 · Score targets (Formative, unit test, half-yearly) · Performance: actual vs target per exam",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "exam_type"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "pct_at_or_above"
+        ]
+      },
+      "sql": "-- P4 KPI 7: Score targets (Formative, unit test, half-yearly)  (Week)\n-- Collection  : Automatic · advisor notes\n-- Quantity    : % of students with targets set for every subject and exam type, and aligned with parents\n-- Quality     : Parent confirmation of targets (yes / no)\n-- Performance : Actual vs. target per exam · % of subjects at or above target\n-- Source      : Advisor portal · Student app · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nSELECT r.exam_type, round(AVG(r.score_pct - t.target_pct), 1) AS avg_gap_pts,\n       COUNT(*) FILTER (WHERE r.score_pct >= t.target_pct) AS subjects_at_or_above, COUNT(*) AS subjects,\n       round(100.0 * COUNT(*) FILTER (WHERE r.score_pct >= t.target_pct) / COUNT(*)) AS pct_at_or_above\nFROM students.exam_results r JOIN students.score_targets t USING (student_id, subject, exam_type)\nGROUP BY r.exam_type ORDER BY MIN(r.exam_on)"
+    },
+    {
+      "tab": 20,
+      "row": 16,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "08 · Time management · Quantity: students with tasks assigned, per week",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 8: Time management  (Week)\n-- Collection  : Automatic\n-- Quantity    : % of students with tasks assigned this week\n-- Quality     : Covered by the timetable pulse\n-- Performance : Task completion rate · deadline adherence · time-estimation accuracy (actual ÷ estimated hours)\n-- Source      : Student app · Advisor portal\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), active AS (SELECT sm.student_id FROM students.student_month sm, m WHERE sm.month = m.s),\nweeks AS (SELECT w::date AS week FROM m, generate_series(date_trunc('week', m.s), m.e, interval '7 days') w)\nSELECT weeks.week, COUNT(DISTINCT t.student_id) AS students_with_tasks,\n       round(100.0 * COUNT(DISTINCT t.student_id) / (SELECT COUNT(*) FROM active)) AS pct\nFROM weeks LEFT JOIN students.tasks t ON t.assigned_on BETWEEN weeks.week AND weeks.week + 6\nGROUP BY weeks.week ORDER BY weeks.week"
+    },
+    {
+      "tab": 20,
+      "row": 16,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "08 · Time management · Performance: completion, deadlines, estimates",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 8: Time management  (Week)\n-- Collection  : Automatic\n-- Quantity    : % of students with tasks assigned this week\n-- Quality     : Covered by the timetable pulse\n-- Performance : Task completion rate · deadline adherence · time-estimation accuracy (actual ÷ estimated hours)\n-- Source      : Student app · Advisor portal\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT (SELECT round(AVG(task_completion_pct), 1) FROM students.student_month WHERE month = m.s)    AS completion_pct,          -- monthly summary\n       (SELECT round(AVG(deadline_adherence_pct), 1) FROM students.student_month WHERE month = m.s) AS deadline_adherence_pct,  -- monthly summary\n       round(AVG(actual_hrs / NULLIF(estimated_hrs, 0)), 2) AS actual_over_estimated                                            -- task data\nFROM students.tasks, m WHERE due_on BETWEEN m.s AND m.e\nGROUP BY m.s"
+    },
+    {
+      "tab": 20,
+      "row": 22,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "09 · Syllabus completion · Quantity: syllabus loaded",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 9: Syllabus completion  (Week)\n-- Collection  : Automatic\n-- Quantity    : % of students whose syllabus is loaded in the advisor portal\n-- Quality     : —\n-- Performance : % syllabus complete vs. pace target (25% per quarter)\n-- Source      : Advisor portal · Student app\n-- Access      : full_access, team_access\n\nSELECT COUNT(DISTINCT c.student_id) AS students_with_syllabus,\n       (SELECT COUNT(DISTINCT student_id) FROM students.student_month) AS students\nFROM students.chapters c"
+    },
+    {
+      "tab": 20,
+      "row": 22,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "09 · Syllabus completion · Performance: syllabus done vs pace, by student",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 9: Syllabus completion  (Week)\n-- Collection  : Automatic\n-- Quantity    : % of students whose syllabus is loaded in the advisor portal\n-- Quality     : —\n-- Performance : % syllabus complete vs. pace target (25% per quarter)\n-- Source      : Advisor portal · Student app\n-- Access      : full_access, team_access\n\nSELECT sm.student_id, sm.syllabus_pct, sm.pace_pct, sm.syllabus_pct - sm.pace_pct AS gap,\n       sm.syllabus_pct >= sm.pace_pct - 2 AS on_track\nFROM students.student_month sm WHERE sm.month = {{month}}::date ORDER BY gap"
+    },
+    {
+      "tab": 20,
+      "row": 28,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "10 · Rigour of completion · Quantity: monthly re-evaluation done",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 10: Rigour of completion  (Week)\n-- Collection  : Automatic · advisor notes\n-- Quantity    : Monthly re-evaluation done by the advisor (yes / no per student)\n-- Quality     : —\n-- Performance : Chapter readiness score · rigour adherence: % of chapters marked complete that went through all 5 stages\n-- Source      : Student app · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE reevaluation_done) AS done, COUNT(*) AS students,\n       round(100.0 * COUNT(*) FILTER (WHERE reevaluation_done) / COUNT(*)) AS pct\nFROM ops.advisor_reviews WHERE month = {{month}}::date"
+    },
+    {
+      "tab": 20,
+      "row": 28,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "10 · Rigour of completion · Performance: readiness and rigour adherence",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 10: Rigour of completion  (Week)\n-- Collection  : Automatic · advisor notes\n-- Quantity    : Monthly re-evaluation done by the advisor (yes / no per student)\n-- Quality     : —\n-- Performance : Chapter readiness score · rigour adherence: % of chapters marked complete that went through all 5 stages\n-- Source      : Student app · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nSELECT (SELECT round(AVG(readiness), 1) FROM students.student_month WHERE month = {{month}}::date) AS avg_readiness,\n       COUNT(*) FILTER (WHERE marked_complete_on IS NOT NULL) AS chapters_complete,\n       COUNT(*) FILTER (WHERE marked_complete_on IS NOT NULL AND stages_done = 5) AS through_all_5_stages,\n       round(100.0 * COUNT(*) FILTER (WHERE marked_complete_on IS NOT NULL AND stages_done = 5)\n             / NULLIF(COUNT(*) FILTER (WHERE marked_complete_on IS NOT NULL), 0)) AS rigour_adherence_pct\nFROM students.chapters WHERE marked_complete_on <= ({{month}}::date + interval '1 month - 1 day')::date"
+    },
+    {
+      "tab": 20,
+      "row": 32,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "11 · Monthly sprints (missed timelines) · Quantity: sprints for students behind",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 11: Monthly sprints (missed timelines)  (Week)\n-- Collection  : Advisor notes · 1-tap rating\n-- Quantity    : Sprints created ÷ students with missed timelines\n-- Quality     : Student rating of the sprint\n-- Performance : % of sprint chapters recovered by month end\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nSELECT (SELECT COUNT(*) FROM students.sprints WHERE month = {{month}}::date) AS sprints,\n       (SELECT COUNT(*) FROM students.student_month WHERE month = {{month}}::date AND syllabus_pct < pace_pct - 8) AS students_behind_8_pts"
+    },
+    {
+      "tab": 20,
+      "row": 32,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "11 · Monthly sprints (missed timelines) · Quality: sprint rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 11: Monthly sprints (missed timelines)  (Week)\n-- Collection  : Advisor notes · 1-tap rating\n-- Quantity    : Sprints created ÷ students with missed timelines\n-- Quality     : Student rating of the sprint\n-- Performance : % of sprint chapters recovered by month end\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), m\nWHERE t.name = 'Monthly sprint' AND d.month BETWEEN m.s AND m.e AND d.planned > 0"
+    },
+    {
+      "tab": 20,
+      "row": 36,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "11 · Monthly sprints (missed timelines) · Performance: chapters recovered",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 11: Monthly sprints (missed timelines)  (Week)\n-- Collection  : Advisor notes · 1-tap rating\n-- Quantity    : Sprints created ÷ students with missed timelines\n-- Quality     : Student rating of the sprint\n-- Performance : % of sprint chapters recovered by month end\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nSELECT SUM(chapters_recovered) AS recovered, SUM(chapters_planned) AS planned,\n       round(100.0 * SUM(chapters_recovered) / NULLIF(SUM(chapters_planned), 0)) AS recovered_pct\nFROM students.sprints WHERE month = {{month}}::date"
+    },
+    {
+      "tab": 20,
+      "row": 36,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "12 · Advisor inputs · Inputs per advisor",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 12: Advisor inputs  (Week)\n-- Collection  : Automatic · advisor notes\n-- Quantity    : % of students with targets aligned · deviation alerts sent · tutor / academy support assigned when triggered\n-- Quality     : —\n-- Performance : Inputs, not student outcomes: shown in the advisor view\n-- Source      : Advisor portal · n8n alerts · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nSELECT a.name AS advisor,\n       COUNT(*) AS students,\n       round(100.0 * COUNT(*) FILTER (WHERE r.targets_aligned) / COUNT(*)) AS targets_aligned_pct,\n       COUNT(*) FILTER (WHERE r.support_assigned) AS support_assigned,\n       (SELECT COUNT(*) FROM ops.alerts al WHERE al.advisor_id = a.advisor_id AND al.alert_type = 'Deviation'\n          AND date_trunc('month', al.raised_on) = {{month}}::date) AS deviation_alerts\nFROM ops.advisor_reviews r JOIN students.students s USING (student_id) JOIN ops.advisors a ON a.advisor_id = s.advisor_id\nWHERE r.month = {{month}}::date GROUP BY a.advisor_id, a.name ORDER BY a.name"
+    },
+    {
+      "tab": 21,
+      "row": 0,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "13 · Workshop 1 & 2 (career discovery) · Quantity and quality: held (target 2 a month), attendance, rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 13: Workshop 1 & 2 (career discovery)  (Month)\n-- Collection  : Host closes event · host rubric in the portal\n-- Quantity    : Workshops held ÷ 2 per month · attendance %\n-- Quality     : Student rating (1–5)\n-- Performance : Soft-skill scores (1–5 rubric) · trend per skill\n-- Source      : Event system · Advisor portal\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), m\nWHERE t.name = 'Workshop' AND d.month BETWEEN m.s AND m.e AND d.planned > 0"
+    },
+    {
+      "tab": 21,
+      "row": 0,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "13 · Workshop 1 & 2 (career discovery) · Performance: soft skills, first vs latest workshop",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "skill"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "first",
+          "latest"
+        ]
+      },
+      "sql": "-- P4 KPI 13: Workshop 1 & 2 (career discovery)  (Month)\n-- Collection  : Host closes event · host rubric in the portal\n-- Quantity    : Workshops held ÷ 2 per month · attendance %\n-- Quality     : Student rating (1–5)\n-- Performance : Soft-skill scores (1–5 rubric) · trend per skill\n-- Source      : Event system · Advisor portal\n-- Access      : full_access, team_access\n\nSELECT skill, round(AVG(first_score), 1) AS first, round(AVG(latest_score), 1) AS latest,\n       round(AVG(latest_score - first_score), 1) AS change\nFROM students.soft_skill_scores GROUP BY skill ORDER BY change DESC"
+    },
+    {
+      "tab": 21,
+      "row": 6,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "14 · Pod session · Quantity and quality: held of planned, attendance, rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 14: Pod session  (Month)\n-- Collection  : Host closes event\n-- Quantity    : Pods held ÷ planned · attendance %\n-- Quality     : Student rating (1–5)\n-- Performance : Host-marked participation (1–5)\n-- Source      : Event system · Advisor portal\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), m\nWHERE t.name = 'Pod session' AND d.month BETWEEN m.s AND m.e AND d.planned > 0"
+    },
+    {
+      "tab": 21,
+      "row": 6,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "14 · Pod session · Performance: host-marked participation",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 14: Pod session  (Month)\n-- Collection  : Host closes event\n-- Quantity    : Pods held ÷ planned · attendance %\n-- Quality     : Student rating (1–5)\n-- Performance : Host-marked participation (1–5)\n-- Source      : Event system · Advisor portal\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), ev AS (SELECT e.* FROM events.events e JOIN events.event_types t USING (event_type_id), m WHERE t.name = 'Pod session' AND e.held_on BETWEEN m.s AND m.e)\nSELECT round(AVG(a.participation_score), 1) AS avg_participation\nFROM ev JOIN events.event_attendance a USING (event_id)"
+    },
+    {
+      "tab": 21,
+      "row": 10,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "15 · Peer session · Quantity and quality: held of planned, attendance, rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 15: Peer session  (Month)\n-- Collection  : Host closes event\n-- Quantity    : Sessions set up by the advisor ÷ planned\n-- Quality     : Rating by both students\n-- Performance : Learning exchange, not scored\n-- Source      : Event system\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), m\nWHERE t.name = 'Peer session' AND d.month BETWEEN m.s AND m.e AND d.planned > 0"
+    },
+    {
+      "tab": 21,
+      "row": 10,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "15 · Peer session · Quality: sessions where both students rated",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 15: Peer session  (Month)\n-- Collection  : Host closes event\n-- Quantity    : Sessions set up by the advisor ÷ planned\n-- Quality     : Rating by both students\n-- Performance : Learning exchange, not scored\n-- Source      : Event system\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), ev AS (SELECT e.* FROM events.events e JOIN events.event_types t USING (event_type_id), m WHERE t.name = 'Peer session' AND e.held_on BETWEEN m.s AND m.e),\nper AS (SELECT ev.event_id, COUNT(r.*) AS raters FROM ev LEFT JOIN events.event_ratings r USING (event_id) WHERE ev.status = 'Held' GROUP BY ev.event_id)\nSELECT COUNT(*) FILTER (WHERE raters >= 2) AS both_rated, COUNT(*) AS sessions FROM per"
+    },
+    {
+      "tab": 21,
+      "row": 14,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "16 · Mentor call · Quantity and quality: held of planned, attendance, rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 16: Mentor call  (Month)\n-- Collection  : Host closes event · advisor notes\n-- Quantity    : Calls held ÷ 1 per student per month\n-- Quality     : Rating (already in the app)\n-- Performance : Follow-up action logged after the call (yes / no)\n-- Source      : Event system · Student app · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), m\nWHERE t.name = 'Mentor call' AND d.month BETWEEN m.s AND m.e AND d.planned > 0"
+    },
+    {
+      "tab": 21,
+      "row": 14,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "16 · Mentor call · Performance: follow-up logged",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 16: Mentor call  (Month)\n-- Collection  : Host closes event · advisor notes\n-- Quantity    : Calls held ÷ 1 per student per month\n-- Quality     : Rating (already in the app)\n-- Performance : Follow-up action logged after the call (yes / no)\n-- Source      : Event system · Student app · ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e), ev AS (SELECT e.* FROM events.events e JOIN events.event_types t USING (event_type_id), m WHERE t.name = 'Mentor call' AND e.held_on BETWEEN m.s AND m.e)\nSELECT COUNT(*) FILTER (WHERE ev.status = 'Held') AS calls_held,\n       COUNT(DISTINCT f.event_id) AS with_follow_up,\n       round(100.0 * COUNT(DISTINCT f.event_id) / NULLIF(COUNT(*) FILTER (WHERE ev.status = 'Held'), 0)) AS pct\nFROM ev LEFT JOIN events.event_follow_ups f USING (event_id)"
+    },
+    {
+      "tab": 21,
+      "row": 18,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "17 · Personal branding · Quantity: shoots done of planned, rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 17: Personal branding  (Month)\n-- Collection  : Status change in the content tracker · 1-tap approval\n-- Quantity    : Shoots done ÷ planned per student · clips published on Instagram\n-- Quality     : Student approves the edited clip (yes / no)\n-- Performance : Not a student metric: Alcovia's accountability, shown to parents as done / on schedule\n-- Source      : ClickUp content tracker · Student app\n-- Access      : full_access, team_access\n\nWITH m AS (SELECT {{month}}::date AS s, ({{month}}::date + interval '1 month - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), m\nWHERE t.name = 'Personal branding shoot' AND d.month BETWEEN m.s AND m.e AND d.planned > 0"
+    },
+    {
+      "tab": 21,
+      "row": 18,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "17 · Personal branding · Quantity: clips published on Instagram",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 17: Personal branding  (Month)\n-- Collection  : Status change in the content tracker · 1-tap approval\n-- Quantity    : Shoots done ÷ planned per student · clips published on Instagram\n-- Quality     : Student approves the edited clip (yes / no)\n-- Performance : Not a student metric: Alcovia's accountability, shown to parents as done / on schedule\n-- Source      : ClickUp content tracker · Student app\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE published_on IS NOT NULL) AS clips_published, COUNT(*) AS clips\nFROM students.content_items WHERE kind = 'Clip' AND due_month = {{month}}::date"
+    },
+    {
+      "tab": 21,
+      "row": 22,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "17 · Personal branding · Quality: clips approved by the student",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 17: Personal branding  (Month)\n-- Collection  : Status change in the content tracker · 1-tap approval\n-- Quantity    : Shoots done ÷ planned per student · clips published on Instagram\n-- Quality     : Student approves the edited clip (yes / no)\n-- Performance : Not a student metric: Alcovia's accountability, shown to parents as done / on schedule\n-- Source      : ClickUp content tracker · Student app\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE student_approved) AS approved, COUNT(*) AS clips,\n       round(100.0 * COUNT(*) FILTER (WHERE student_approved) / NULLIF(COUNT(*), 0)) AS pct\nFROM students.content_items WHERE kind = 'Clip' AND due_month = {{month}}::date"
+    },
+    {
+      "tab": 21,
+      "row": 22,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "17 · Personal branding · Parent view: status this quarter",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 17: Personal branding  (Month)\n-- Collection  : Status change in the content tracker · 1-tap approval\n-- Quantity    : Shoots done ÷ planned per student · clips published on Instagram\n-- Quality     : Student approves the edited clip (yes / no)\n-- Performance : Not a student metric: Alcovia's accountability, shown to parents as done / on schedule\n-- Source      : ClickUp content tracker · Student app\n-- Access      : full_access, team_access\n\nSELECT status, COUNT(*) AS students\nFROM events.family_deliverables WHERE item IN ('Personal branding shoots', 'Clips published on Instagram')\nGROUP BY status ORDER BY status"
+    },
+    {
+      "tab": 22,
+      "row": 0,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "18 · Podcast shoot · Quantity and quality: shoots held of planned this quarter, rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 18: Podcast shoot  (Quarter)\n-- Collection  : Host closes event · status change in the content tracker\n-- Quantity    : Shoots held ÷ students due this quarter · episodes published\n-- Quality     : Student rating\n-- Performance : Host rating of preparation (questions researched, 1–5)\n-- Source      : Event system · ClickUp content tracker\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), q\nWHERE t.name = 'Podcast shoot' AND d.month BETWEEN q.s AND q.e AND d.planned > 0"
+    },
+    {
+      "tab": 22,
+      "row": 0,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "18 · Podcast shoot · Quantity: episodes published this quarter",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 18: Podcast shoot  (Quarter)\n-- Collection  : Host closes event · status change in the content tracker\n-- Quantity    : Shoots held ÷ students due this quarter · episodes published\n-- Quality     : Student rating\n-- Performance : Host rating of preparation (questions researched, 1–5)\n-- Source      : Event system · ClickUp content tracker\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT COUNT(published_on) AS episodes_published FROM students.content_items, q WHERE kind = 'Podcast' AND due_month BETWEEN q.s AND q.e"
+    },
+    {
+      "tab": 22,
+      "row": 4,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "18 · Podcast shoot · Performance: preparation (host rating)",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 18: Podcast shoot  (Quarter)\n-- Collection  : Host closes event · status change in the content tracker\n-- Quantity    : Shoots held ÷ students due this quarter · episodes published\n-- Quality     : Student rating\n-- Performance : Host rating of preparation (questions researched, 1–5)\n-- Source      : Event system · ClickUp content tracker\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT round(AVG(prep_rating), 1) AS avg_prep_rating, COUNT(prep_rating) AS rated\nFROM students.content_items, q WHERE kind = 'Podcast' AND due_month BETWEEN q.s AND q.e"
+    },
+    {
+      "tab": 22,
+      "row": 4,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "19 · Competition prep · Quantity: students entered this quarter",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 19: Competition prep  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating\n-- Quantity    : % of students entered in a competition this quarter\n-- Quality     : Student rating of the prep\n-- Performance : Outcome: participated / shortlisted / placed\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT COUNT(DISTINCT c.student_id) AS students_entered,\n       (SELECT COUNT(DISTINCT student_id) FROM students.student_month) AS students\nFROM students.competitions c, q WHERE c.quarter = q.s"
+    },
+    {
+      "tab": 22,
+      "row": 8,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "19 · Competition prep · Quality: rating of the prep sessions",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 19: Competition prep  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating\n-- Quantity    : % of students entered in a competition this quarter\n-- Quality     : Student rating of the prep\n-- Performance : Outcome: participated / shortlisted / placed\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), q\nWHERE t.name = 'Competition prep' AND d.month BETWEEN q.s AND q.e AND d.planned > 0"
+    },
+    {
+      "tab": 22,
+      "row": 8,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "19 · Competition prep · Performance: outcomes",
+      "display": "pie",
+      "visualization_settings": {
+        "pie.dimension": "outcome",
+        "pie.metric": "entries"
+      },
+      "sql": "-- P4 KPI 19: Competition prep  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating\n-- Quantity    : % of students entered in a competition this quarter\n-- Quality     : Student rating of the prep\n-- Performance : Outcome: participated / shortlisted / placed\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT COALESCE(outcome, 'Not yet') AS outcome, COUNT(*) AS entries\nFROM students.competitions c, q WHERE c.quarter = q.s GROUP BY 1 ORDER BY 2 DESC"
+    },
+    {
+      "tab": 22,
+      "row": 14,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "20 · Parent–child workshop · Quantity and quality: held this quarter (target 1), student rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 20: Parent–child workshop  (Quarter)\n-- Collection  : Host closes event\n-- Quantity    : Held (1 per quarter) · % of families with a parent present\n-- Quality     : Student and parent ratings\n-- Performance : Bonding outcome, not scored: parent rating is the measure\n-- Source      : Event system\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), q\nWHERE t.name = 'Parent–child workshop' AND d.month BETWEEN q.s AND q.e AND d.planned > 0"
+    },
+    {
+      "tab": 22,
+      "row": 14,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "20 · Parent–child workshop · Quantity: families with a parent present",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 20: Parent–child workshop  (Quarter)\n-- Collection  : Host closes event\n-- Quantity    : Held (1 per quarter) · % of families with a parent present\n-- Quality     : Student and parent ratings\n-- Performance : Bonding outcome, not scored: parent rating is the measure\n-- Source      : Event system\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e), ev AS (SELECT e.* FROM events.events e JOIN events.event_types t USING (event_type_id), q WHERE t.name = 'Parent–child workshop' AND e.held_on BETWEEN q.s AND q.e)\nSELECT COUNT(*) FILTER (WHERE a.attended) AS present, COUNT(*) AS invited, round(100.0 * COUNT(*) FILTER (WHERE a.attended) / NULLIF(COUNT(*), 0)) AS attendance_pct FROM ev JOIN events.event_attendance a USING (event_id) WHERE a.role = 'Parent'"
+    },
+    {
+      "tab": 22,
+      "row": 18,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "20 · Parent–child workshop · Quality: parent rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 20: Parent–child workshop  (Quarter)\n-- Collection  : Host closes event\n-- Quantity    : Held (1 per quarter) · % of families with a parent present\n-- Quality     : Student and parent ratings\n-- Performance : Bonding outcome, not scored: parent rating is the measure\n-- Source      : Event system\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e), ev AS (SELECT e.* FROM events.events e JOIN events.event_types t USING (event_type_id), q WHERE t.name = 'Parent–child workshop' AND e.held_on BETWEEN q.s AND q.e)\nSELECT round(AVG(r.rating), 1) AS avg_rating, COUNT(*) AS ratings FROM ev JOIN events.event_ratings r USING (event_id) WHERE r.rater = 'Parent'"
+    },
+    {
+      "tab": 22,
+      "row": 18,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "21 · Out-of-city experience · Quantity and quality: held this quarter (target 1), attendance, rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 21: Out-of-city experience  (Quarter)\n-- Collection  : Host closes event\n-- Quantity    : Held (1 per quarter) · attendance %\n-- Quality     : Student rating\n-- Performance : Experience, not scored\n-- Source      : Event system\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT SUM(d.held) AS held, SUM(d.planned) AS planned,\n       round(100.0 * SUM(d.held) / NULLIF(SUM(d.planned), 0)) AS held_pct,\n       round(SUM(d.rating_avg * d.ratings_n) / NULLIF(SUM(d.ratings_n), 0), 1) AS avg_rating, SUM(d.ratings_n) AS ratings,\n       round(SUM(d.attendance_pct * d.held) / NULLIF(SUM(d.held) FILTER (WHERE d.attendance_pct IS NOT NULL), 0)) AS attendance_pct\nFROM events.delivery_month d JOIN events.event_types t USING (event_type_id), q\nWHERE t.name = 'Out-of-city experience' AND d.month BETWEEN q.s AND q.e AND d.planned > 0"
+    },
+    {
+      "tab": 22,
+      "row": 22,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "22 · Theme: social work · Quantity: students with an active project (social work is not the theme this quarter in the sample: expect zeros)",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 22: Theme: social work  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating at quarter end\n-- Quantity    : Group projects / active startups ÷ groups / students in the theme\n-- Quality     : Student rating at quarter end\n-- Performance : Monthly milestones hit ÷ planned\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM students.milestones mi WHERE mi.student_id = s.student_id AND mi.track = 'Social work')\n                       AND s.startup IS NOT NULL) AS active_projects,\n       COUNT(*) AS students\nFROM students.students s WHERE s.student_id IN (SELECT student_id FROM students.student_month)"
+    },
+    {
+      "tab": 22,
+      "row": 22,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "22 · Theme: social work · Quality: quarter-end rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 22: Theme: social work  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating at quarter end\n-- Quantity    : Group projects / active startups ÷ groups / students in the theme\n-- Quality     : Student rating at quarter end\n-- Performance : Monthly milestones hit ÷ planned\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT round(AVG(answer), 1) AS avg_rating, COUNT(*) AS responses\nFROM students.pulse_responses, q\nWHERE question = 'How was this quarter''s theme?' AND asked_on BETWEEN q.s AND q.e AND 'Social work' = 'Entrepreneurship'"
+    },
+    {
+      "tab": 22,
+      "row": 26,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "22 · Theme: social work · Performance: milestones hit, by month",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "month"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "hit",
+          "due"
+        ]
+      },
+      "sql": "-- P4 KPI 22: Theme: social work  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating at quarter end\n-- Quantity    : Group projects / active startups ÷ groups / students in the theme\n-- Quality     : Student rating at quarter end\n-- Performance : Monthly milestones hit ÷ planned\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nSELECT to_char(due_month, 'YYYY-MM') AS month, COUNT(*) AS due,\n       COUNT(*) FILTER (WHERE status = 'Done') AS hit,\n       round(100.0 * COUNT(*) FILTER (WHERE status = 'Done') / NULLIF(COUNT(*), 0)) AS hit_pct\nFROM students.milestones WHERE track = 'Social work' GROUP BY due_month ORDER BY due_month"
+    },
+    {
+      "tab": 22,
+      "row": 26,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "23 · Theme: entrepreneurship · Quantity: students with an active project",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 23: Theme: entrepreneurship  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating at quarter end\n-- Quantity    : Group projects / active startups ÷ groups / students in the theme\n-- Quality     : Student rating at quarter end\n-- Performance : Monthly milestones hit ÷ planned\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM students.milestones mi WHERE mi.student_id = s.student_id AND mi.track = 'Entrepreneurship')\n                       AND s.startup IS NOT NULL) AS active_projects,\n       COUNT(*) AS students\nFROM students.students s WHERE s.student_id IN (SELECT student_id FROM students.student_month)"
+    },
+    {
+      "tab": 22,
+      "row": 32,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "23 · Theme: entrepreneurship · Quality: quarter-end rating",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 23: Theme: entrepreneurship  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating at quarter end\n-- Quantity    : Group projects / active startups ÷ groups / students in the theme\n-- Quality     : Student rating at quarter end\n-- Performance : Monthly milestones hit ÷ planned\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nWITH q AS (SELECT date_trunc('quarter', {{month}}::date)::date AS s, (date_trunc('quarter', {{month}}::date) + interval '3 months - 1 day')::date AS e)\nSELECT round(AVG(answer), 1) AS avg_rating, COUNT(*) AS responses\nFROM students.pulse_responses, q\nWHERE question = 'How was this quarter''s theme?' AND asked_on BETWEEN q.s AND q.e AND 'Entrepreneurship' = 'Entrepreneurship'"
+    },
+    {
+      "tab": 22,
+      "row": 32,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "23 · Theme: entrepreneurship · Performance: milestones hit, by month",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "month"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "hit",
+          "due"
+        ]
+      },
+      "sql": "-- P4 KPI 23: Theme: entrepreneurship  (Quarter)\n-- Collection  : Advisor notes · 1-tap rating at quarter end\n-- Quantity    : Group projects / active startups ÷ groups / students in the theme\n-- Quality     : Student rating at quarter end\n-- Performance : Monthly milestones hit ÷ planned\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nSELECT to_char(due_month, 'YYYY-MM') AS month, COUNT(*) AS due,\n       COUNT(*) FILTER (WHERE status = 'Done') AS hit,\n       round(100.0 * COUNT(*) FILTER (WHERE status = 'Done') / NULLIF(COUNT(*), 0)) AS hit_pct\nFROM students.milestones WHERE track = 'Entrepreneurship' GROUP BY due_month ORDER BY due_month"
+    },
+    {
+      "tab": 22,
+      "row": 38,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "24 · Summer program applications · Applications",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 24: Summer program applications  (Quarter)\n-- Collection  : Advisor notes\n-- Quantity    : Applications planned per student\n-- Quality     : —\n-- Performance : Applications submitted ÷ planned · acceptances\n-- Source      : ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nSELECT COUNT(DISTINCT student_id) AS students_applying, COUNT(*) AS planned,\n       COUNT(submitted_on) AS submitted,\n       round(100.0 * COUNT(submitted_on) / NULLIF(COUNT(*), 0)) AS submitted_pct,\n       COUNT(*) FILTER (WHERE outcome = 'Accepted') AS accepted\nFROM students.summer_applications"
+    },
+    {
+      "tab": 23,
+      "row": 0,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "25 · Career roadmap · Roadmaps",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 25: Career roadmap  (Roadmap)\n-- Collection  : Advisor notes · 1-tap rating\n-- Quantity    : % of students with a career roadmap made\n-- Quality     : Student rating of the roadmap\n-- Performance : Done / not done (binary, per the brief)\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE made_on IS NOT NULL) AS made, COUNT(*) AS students,\n       round(100.0 * COUNT(*) FILTER (WHERE made_on IS NOT NULL) / COUNT(*)) AS made_pct,\n       round(AVG(rating), 1) AS avg_rating\nFROM students.roadmaps WHERE kind = 'Career'"
+    },
+    {
+      "tab": 23,
+      "row": 0,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "25 · Career roadmap · Done / not done per student",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 25: Career roadmap  (Roadmap)\n-- Collection  : Advisor notes · 1-tap rating\n-- Quantity    : % of students with a career roadmap made\n-- Quality     : Student rating of the roadmap\n-- Performance : Done / not done (binary, per the brief)\n-- Source      : ClickUp notes → n8n + LLM · Student app\n-- Access      : full_access, team_access\n\nSELECT s.student_id, s.name, s.career_roadmap AS status\nFROM students.students s WHERE s.career_roadmap IS NOT NULL ORDER BY s.career_roadmap, s.student_id"
+    },
+    {
+      "tab": 23,
+      "row": 6,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 4,
+      "name": "26 · Personal roadmap · Quantity: personal roadmap set",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 26: Personal roadmap  (Roadmap)\n-- Collection  : Advisor notes\n-- Quantity    : % of students with monthly milestones set\n-- Quality     : —\n-- Performance : Monthly milestones hit ÷ due\n-- Source      : ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nSELECT COUNT(*) FILTER (WHERE made_on IS NOT NULL) AS set, COUNT(*) AS students,\n       round(100.0 * COUNT(*) FILTER (WHERE made_on IS NOT NULL) / COUNT(*)) AS pct\nFROM students.roadmaps WHERE kind = 'Personal'"
+    },
+    {
+      "tab": 23,
+      "row": 6,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "26 · Personal roadmap · Performance: personal milestones hit, by month",
+      "display": "bar",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "month"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "hit",
+          "due"
+        ]
+      },
+      "sql": "-- P4 KPI 26: Personal roadmap  (Roadmap)\n-- Collection  : Advisor notes\n-- Quantity    : % of students with monthly milestones set\n-- Quality     : —\n-- Performance : Monthly milestones hit ÷ due\n-- Source      : ClickUp notes → n8n + LLM\n-- Access      : full_access, team_access\n\nSELECT to_char(due_month, 'YYYY-MM') AS month, COUNT(*) AS due,\n       COUNT(*) FILTER (WHERE status = 'Done') AS hit,\n       round(100.0 * COUNT(*) FILTER (WHERE status = 'Done') / NULLIF(COUNT(*), 0)) AS hit_pct\nFROM students.milestones WHERE track = 'Personal' GROUP BY due_month ORDER BY due_month"
+    },
+    {
+      "tab": 23,
+      "row": 12,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "27 · Academic roadmap · Academic summary per student for the month",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 27: Academic roadmap  (Roadmap)\n-- Collection  : See the Week rows\n-- Quantity    : See the Week rows\n-- Quality     : See the Week rows\n-- Performance : See the Week rows: score targets (7), syllabus (9), rigour (10)\n-- Source      : —\n-- Access      : full_access, team_access\n\nSELECT sm.student_id, sm.syllabus_pct, sm.pace_pct, sm.readiness,\n       (SELECT round(AVG(r.score_pct - t.target_pct), 1) FROM students.exam_results r JOIN students.score_targets t USING (student_id, subject, exam_type)\n         WHERE r.student_id = sm.student_id) AS avg_gap_to_target\nFROM students.student_month sm WHERE sm.month = {{month}}::date ORDER BY sm.student_id"
+    },
+    {
+      "tab": 23,
+      "row": 12,
+      "col": 12,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "28 · Syllabus completion (roadmap) · On track per subject (within 2 points of pace)",
+      "display": "row",
+      "visualization_settings": {
+        "graph.dimensions": [
+          "subject"
+        ],
+        "graph.show_values": true,
+        "graph.metrics": [
+          "pct"
+        ]
+      },
+      "sql": "-- P4 KPI 28: Syllabus completion (roadmap)  (Roadmap)\n-- Collection  : Automatic\n-- Quantity    : —\n-- Quality     : —\n-- Performance : On track vs. 25% per quarter (yes / no per subject)\n-- Source      : Advisor portal · Student app\n-- Access      : full_access, team_access\n\nSELECT subject, COUNT(*) FILTER (WHERE syllabus_pct >= pace_pct - 2) AS on_track, COUNT(*) AS students,\n       round(100.0 * COUNT(*) FILTER (WHERE syllabus_pct >= pace_pct - 2) / COUNT(*)) AS pct\nFROM students.subject_progress GROUP BY subject ORDER BY pct"
+    },
+    {
+      "tab": 23,
+      "row": 18,
+      "col": 0,
+      "size_x": 12,
+      "size_y": 6,
+      "name": "29 · Rigour of completion (roadmap) · Rigour adherence per student",
+      "display": "table",
+      "visualization_settings": {},
+      "sql": "-- P4 KPI 29: Rigour of completion (roadmap)  (Roadmap)\n-- Collection  : Automatic\n-- Quantity    : —\n-- Quality     : —\n-- Performance : Rigour adherence (see row 10), per student\n-- Source      : Student app\n-- Access      : full_access, team_access\n\nSELECT student_id,\n       COUNT(*) FILTER (WHERE marked_complete_on IS NOT NULL) AS chapters_complete,\n       round(100.0 * COUNT(*) FILTER (WHERE marked_complete_on IS NOT NULL AND stages_done = 5)\n             / NULLIF(COUNT(*) FILTER (WHERE marked_complete_on IS NOT NULL), 0)) AS rigour_adherence_pct\nFROM students.chapters GROUP BY student_id ORDER BY rigour_adherence_pct"
+    }
+  ]
+}
