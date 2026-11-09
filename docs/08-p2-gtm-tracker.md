@@ -120,6 +120,7 @@ PageSpeed Insights (load time) ────┘
 - **Same Metabase and reporting database as the student dashboard (P4).** Since hosting is already paid for.
 - **To check first:** the `lead-form` workflow writes every campaign field onto the ClickUp lead; and each Meta ad passes its own name in its URL settings, so a lead can be matched to the exact creative.
 - **Data-freshness alert:** n8n flags any source that hasn't updated on schedule (P3, stage 8).
+- **Built:** the reporting database ([`db/SCHEMA.md`](../db/SCHEMA.md): schemas `leads`, `ads`, `revenue`, `events`, `students`, `ops`), one SQL file per KPI in this doc ([`sql/kpis/p2_gtm_tracker`](../sql/kpis/p2_gtm_tracker), mapped 1:1 in the KPI workbook), the Metabase dashboard ([`metabase/`](../metabase)) and the static dashboard on GitHub Pages ([`dashboards/`](../dashboards)). All show the same numbers on the sample data.
 
 ## 4. Dashboard design
 

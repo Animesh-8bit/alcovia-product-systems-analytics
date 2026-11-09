@@ -24,6 +24,10 @@ Context: [01 business model](docs/01-business-model-context.md) · [02 app featu
 
 On the sample data, the SQL files, the Metabase dashboards and the static dashboards all show the same numbers (for example P2, 1 Dec 2026 – 26 Feb 2027: revenue ₹60,51,822 at 138% of target, 21 conversions, ₹4,592 per qualified lead).
 
+## Publishing the dashboards
+
+GitHub Pages serves the `gh-pages` branch, which is a copy of `dashboards/site`. After `./dashboards/build_static.sh`, publish with `git subtree push --prefix dashboards/site origin gh-pages`.
+
 ## Run it
 
 Needs Docker and Python 3.

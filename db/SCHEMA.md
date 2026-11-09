@@ -41,6 +41,16 @@ The lead row stays after the family pays, so the funnel history is kept. `studen
 | `subject_progress` | student per subject: syllabus vs pace, readiness, latest score vs target | Portal + notes extraction |
 | `soft_skill_scores` | student per skill: first vs latest workshop score | Workshop host |
 | `milestones` | milestone: track, due month, status | Notes → n8n + LLM |
+| `app_sessions` | focus / quiz / game session, minutes, linked timetable slot | Student app |
+| `timetable_slots` | advisor-built timetable slot pushed to the app | Advisor portal |
+| `quiz_attempts` | student per 8 PM quiz: score, topic, optional rating | Student app |
+| `health_daily` | student per day: sleep, active minutes | Apple Health / Health Connect |
+| `pulse_responses` | 1-tap answer (timetable pulse, quarter-end theme rating) | Student app |
+| `tasks` | task: assigned, due, completed, estimated vs actual hours | Student app + portal |
+| `score_targets`, `exam_results` | target and result per subject per exam (formative, unit test, half-yearly), parent confirmed | Portal + notes |
+| `chapters` | chapter: stages done (1–5), completed on, readiness | Portal + app |
+| `sprints` | monthly sprint for students behind: chapters planned vs recovered, rating | Notes + app |
+| `roadmaps`, `competitions`, `summer_applications`, `content_items` | career / personal roadmap; competition entries and outcomes; summer applications; shoots, clips, podcasts | Notes, ClickUp content tracker |
 
 **leads**
 
@@ -57,6 +67,9 @@ The lead row stays after the family pays, so the funnel history is kept. `studen
 | `events` | event: date, venue, seats sold, attended. Public workshops today; program events once the event system is live | Razorpay links + check-in / event system |
 | `delivery_month` | event type per month: planned, held, attendance, ratings | Event system |
 | `family_deliverables` | student per item owed this quarter: planned vs done (parent view) | Event system |
+| `event_attendance` | student or parent per event: attended, participation score | Event system |
+| `event_ratings` | 1-tap rating per event by student or parent | Event system |
+| `event_follow_ups` | action agreed in an advisor session or mentor call, completed on | Advisor notes |
 
 **ops**
 
@@ -65,6 +78,7 @@ The lead row stays after the family pays, so the funnel history is kept. `studen
 | `settings` | shared setting: as-of date, days-to-decide target, invoice and renewal colour thresholds | Data team |
 | `advisors` | advisor | Advisor portal |
 | `alerts` | alert sent to an advisor about a student | n8n |
+| `advisor_reviews` | student per month: re-evaluation done, targets aligned with parents, support assigned | Advisor portal |
 
 **ads** (restricted)
 
@@ -105,11 +119,11 @@ Loaded from the two dashboards' sample files by [`build_seed.py`](build_seed.py)
 
 | Schema | Tables | Rows |
 |---|---|---|
-| `students` | 8 | 925 |
+| `students` | 22 | 12,349 |
 | `leads` | 1 | 1,524 |
-| `events` | 4 | 189 |
-| `ops` | 3 | 32 |
+| `events` | 7 | 2,210 |
+| `ops` | 4 | 92 |
 | `ads` | 5 | 2,092 |
 | `revenue` | 2 | 542 |
 
-**Later (production):** raw tables beside the summaries: `app_sessions`, `quiz_attempts`, per-student `event_attendance` and `event_ratings`, `notes_extractions` (field, value, source sentence, confidence). They come with the event system and the app data push (P4 timeline, weeks 4 and 11).
+**Summaries and raw tables.** `student_month`, `student_week`, `subject_progress` and `events.delivery_month` are the monthly / weekly summaries the P4 dashboard reads. The raw tables (app sessions, quiz attempts, health, timetable, tasks, targets, exams, chapters, sprints, roadmaps, competitions, applications, content, attendance, ratings, follow-ups, advisor reviews) hold made-up rows for the 20 P4 sample students, drawn by [`build_raw_sample.py`](build_raw_sample.py) from each student's monthly figures. In production n8n fills the raw tables and builds the summaries from them. Not modelled yet: `notes_extractions` (field, value, source sentence, confidence) for the ClickUp notes pipeline.

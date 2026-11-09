@@ -145,6 +145,7 @@ Health data ────┘
 ```
 
 - n8n checks each source daily; if a feed hasn't updated on schedule, the SD is notified (P3, stage 8).
+- **Built:** the reporting schema ([`db/SCHEMA.md`](../db/SCHEMA.md): `students`, `events`, `ops`, with summaries and raw tables), one SQL file per row of the KPI framework in §2 ([`sql/kpis/p4_student_dashboard`](../sql/kpis/p4_student_dashboard)), the Metabase dashboard with Day / Week / Month / Quarter / Roadmap tabs ([`metabase/`](../metabase)) and the static dashboard on GitHub Pages ([`dashboards/`](../dashboards)). Advisors and the GTM team connect with a role that cannot read `ads` or `revenue`.
 
 ## 7. Dashboard design
 
