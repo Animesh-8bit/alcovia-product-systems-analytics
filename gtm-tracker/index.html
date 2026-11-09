@@ -1,0 +1,1350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alcovia GTM Tracker</title>
+<style>
+:root {
+  --color-fg: #1f1e1c; --color-fg-muted: #6b675f; --color-bg: #f7f6f3; --color-panel: #ffffff; --color-border-line: #e4e0d8;
+  --color-ok: #2e7d4f; --color-warn: #a86d12; --color-bad: #c0392b;
+  --cds-chart-muted: #b3ada3; --cds-chart-grid: #eeeae3; --cds-chart-axis: #cbc5ba; --cds-chart-reference: #8a857c; --cds-chart-status-critical: #c0392b;
+  --cds-surface-popover: #ffffff; --cds-border: #e4e0d8; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.12); --cds-text-secondary: #6b675f;
+  --font-anthropic-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-anthropic-serif: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --cds-font-size-caption: 12px; --cds-font-size-body: 14px; --cds-font-size-heading: 16px; --cds-font-size-title: 28px; --cds-font-weight-medium: 600;
+  --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-gap-xl: 32px;
+  --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 16px; --cds-pad-xl: 24px;
+  --cds-radius: 8px; --cds-dur-slow: 300ms; --cds-ease-out: cubic-bezier(.2,.8,.2,1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-fg: #ecebe8; --color-fg-muted: #a29e96; --color-bg: #1a1917; --color-panel: #23221f; --color-border-line: #3a3833;
+    --color-ok: #5fbf86; --color-warn: #e0a84a; --color-bad: #ef6f60;
+    --cds-chart-muted: #6e6a62; --cds-chart-grid: #312f2b; --cds-chart-axis: #4a4741; --cds-chart-reference: #8f8a81; --cds-chart-status-critical: #ef6f60;
+    --cds-surface-popover: #2b2a26; --cds-border: #3a3833; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.4); --cds-text-secondary: #a29e96;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: 14px; }
+#dash-root { max-width: 1280px; margin-inline: auto; padding-block: 28px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.dash-skeleton { background: color-mix(in srgb, var(--color-fg) 5%, transparent); border-radius: var(--cds-radius); }
+.ax-foot { margin-top: 28px; font-size: 12px; color: var(--color-fg-muted); }
+.gx-logo { width: 44px; height: 44px; border-radius: 8px; background: #fff; padding: 3px; flex: none; }
+</style>
+<script src="d3.min.js"></script>
+<script src="data/data.js"></script>
+<script src="dash-shim.js"></script>
+</head>
+<body>
+<div id="dash-root">
+<style>
+/* Alcovia brand: deep green band, gold accent, maroon / gold / navy for the three revenue streams */
+.gx { --gx-green: #08261e; --gx-green-2: #0f3a2e; --gx-cream: #f7f7f3; --gx-gold: #eabf36;
+  display: flex; flex-direction: column; gap: var(--cds-gap-md); font-family: var(--font-anthropic-sans); color: var(--color-fg); }
+.gx p { margin: 0; }
+.gx h2 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.gx-band { background: var(--gx-green); color: var(--gx-cream); border-radius: var(--cds-radius); padding: var(--cds-pad-md) var(--cds-pad-lg);
+  display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-lg); align-items: center; justify-content: space-between; }
+.gx-brand { display: flex; align-items: center; gap: var(--cds-gap-sm); min-width: 0; }
+.gx-brand h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 1.5rem; margin: 0; color: var(--gx-cream); }
+.gx-brand h1 b { color: var(--gx-gold); font-weight: 400; }
+.gx-sub-band { font-size: var(--cds-font-size-caption); color: color-mix(in srgb, var(--gx-cream) 70%, transparent); font-variant-numeric: tabular-nums; }
+.gx-controls { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; }
+.gx-controls label { display: inline-flex; gap: var(--cds-gap-xs); align-items: center; font-size: var(--cds-font-size-caption); color: color-mix(in srgb, var(--gx-cream) 75%, transparent); }
+.gx-band select { font: inherit; font-size: var(--cds-font-size-body); color: var(--gx-cream); background: var(--gx-green-2); border: 1px solid color-mix(in srgb, var(--gx-gold) 45%, transparent); border-radius: var(--cds-radius); padding: 3px 8px; }
+.gx-band select:focus-visible { outline: 2px solid var(--gx-gold); outline-offset: 2px; }
+.gx-tabs { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); border-bottom: 1px solid var(--color-border-line); }
+.gx-tab { font: inherit; font-size: var(--cds-font-size-body); background: none; border: 0; border-bottom: 2px solid transparent; padding: 4px 2px 6px; color: var(--color-fg-muted); cursor: pointer; }
+.gx-tab[aria-selected="true"] { color: var(--color-fg); border-bottom-color: var(--gx-gold); font-weight: var(--cds-font-weight-medium); }
+.gx-tab:focus-visible, .gx-seg:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+.gx-section { display: flex; flex-direction: column; gap: var(--cds-gap-md); min-width: 0; }
+.gx-segs { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); align-items: center; }
+.gx-seg { font: inherit; font-size: var(--cds-font-size-caption); background: none; border: 1px solid var(--color-border-line); border-radius: 999px; padding: 3px 12px; color: var(--color-fg-muted); cursor: pointer; }
+.gx-seg[aria-pressed="true"] { color: var(--gx-cream); background: var(--gx-green); border-color: var(--gx-green); }
+.gx-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--cds-gap-sm); }
+@media (min-width: 640px) { .gx-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1180px) { .gx-tiles--8 { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+.gx-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-sm) var(--cds-pad-md); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gx-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gx-big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 1.6rem; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.gx-unit { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.gx-sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.gx-meter { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--color-fg) 9%, transparent); overflow: hidden; margin-top: 2px; }
+.gx-meter i { display: block; height: 100%; width: 0; background: var(--gx-gold); border-radius: 2px; }
+.gx .gx-up { color: var(--color-ok); }
+.gx .gx-down { color: var(--color-bad); }
+.gx-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: var(--cds-gap-md); }
+.gx-grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: var(--cds-gap-md); }
+.gx-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-md); display: flex; flex-direction: column; gap: var(--cds-gap-xs); min-width: 0; }
+.gx-card-h { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); align-items: baseline; justify-content: space-between; }
+.gx-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.gx .gx-note b { color: var(--color-fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gx-chart { position: relative; min-height: 200px; }
+.gx-chart--s { min-height: 150px; }
+.gx-chart--xs { min-height: 80px; }
+.gx-chart svg { display: block; overflow: visible; }
+.gx-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
+.gx-tip .gx-tip-h { color: var(--cds-text-secondary); }
+.gx-sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.gx-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.gx-legend span { display: inline-flex; align-items: center; }
+.gx-key { display: inline-block; width: 14px; height: 0; border-top: 2px dashed var(--cds-chart-reference); margin-right: 6px; }
+.gx-c-a1 { background: var(--color-warn); } .gx-c-a2 { background: color-mix(in srgb, var(--color-warn) 50%, var(--cds-chart-status-critical)); } .gx-c-a3 { background: var(--cds-chart-status-critical); }
+.gx-c-full { background: var(--gx-full, #9b2d42); } .gx-c-trial { background: var(--gx-trial, #d9a21b); } .gx-c-ws { background: var(--gx-ws, #3b6ea8); }
+.gx-tablewrap { overflow: auto; max-height: 15rem; }
+.gx-tablewrap--tall { max-height: 22rem; }
+.gx table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.gx th { text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: 4px 6px; border-bottom: 1px solid var(--color-border-line); position: sticky; top: 0; background: var(--color-panel); white-space: nowrap; }
+.gx td { padding: 4px 6px; border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+.gx th.n, .gx td.n { text-align: right; }
+.gx tbody tr:last-child td { border-bottom: none; }
+.gx-click tbody tr { cursor: pointer; }
+.gx-click tbody tr:hover td { background: color-mix(in srgb, var(--gx-gold) 8%, transparent); }
+.gx tr.gx-sel td { background: color-mix(in srgb, var(--gx-gold) 16%, transparent); }
+.gx-pill { display: inline-block; min-width: 3em; text-align: center; padding: 0 7px; border-radius: 999px; font-size: var(--cds-font-size-caption); white-space: nowrap; }
+.gx-g { background: color-mix(in srgb, var(--color-ok) 16%, transparent); }
+.gx-y { background: color-mix(in srgb, var(--color-warn) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--color-warn) 45%, transparent); }
+.gx-a { background: color-mix(in srgb, var(--color-warn) 22%, transparent); }
+.gx-r { background: color-mix(in srgb, var(--color-bad) 18%, transparent); }
+.gx-n { background: color-mix(in srgb, var(--color-fg) 6%, transparent); }
+.gx-strip { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-lg); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.gx .gx-strip b { color: var(--color-fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gx-detail { border-color: color-mix(in srgb, var(--gx-gold) 55%, var(--color-border-line)); }
+.gx-detail-name { font-family: var(--font-anthropic-serif); font-size: 1.25rem; }
+.gx-empty { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.gx-foot { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+[data-dash-source-state=empty] { color: transparent; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+
+<div class="gx">
+  <header class="gx-band" id="header">
+    <div class="gx-brand">
+      <img class="gx-logo" src="alcovia-logo.png" alt="Alcovia logo">
+      <div>
+        <h1>Alcovia <b>GTM tracker</b></h1>
+        <p class="gx-sub-band"><span data-draw="range-start" data-source="period_list" data-field="start">—</span> to <span data-draw="range-end" data-source="period_list" data-field="end">—</span> · compared with the <span data-draw="range-days" data-source="period_list" data-field="days">—</span> days before · sample data</p>
+      </div>
+    </div>
+    <div class="gx-controls">
+      <label>Period
+        <select class="gx-period" id="period" aria-label="Period">
+          <option value="this_month">This month</option>
+          <option value="last_month">Last month</option>
+          <option value="last_3_months">Last 3 months</option>
+          <option value="qtd">Quarter to date</option>
+          <option value="custom">Custom range</option>
+        </select>
+      </label>
+      <label class="gx-custom" hidden>From
+        <select data-draw="from-month" data-source="period_list" id="from-month" aria-label="From month"></select>
+      </label>
+      <label class="gx-custom" hidden>To
+        <select data-draw="to-month" data-source="period_list" id="to-month" aria-label="To month"></select>
+      </label>
+    </div>
+  </header>
+
+  <div class="gx-tabs" role="tablist" aria-label="Views">
+    <button class="gx-tab" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button class="gx-tab" role="tab" data-tab="revenue" aria-selected="false">Revenue</button>
+    <button class="gx-tab" role="tab" data-tab="funnel" aria-selected="false">Funnel</button>
+    <button class="gx-tab" role="tab" data-tab="campaigns" aria-selected="false">Campaigns</button>
+    <button class="gx-tab" role="tab" data-tab="actions" aria-selected="false">Actions</button>
+  </div>
+
+  <!-- Overview -->
+  <section class="gx-section" id="overview" data-page="overview">
+    <div class="gx-tiles gx-tiles--8">
+      <div class="gx-tile" id="tile-revenue">
+        <span class="gx-label">Revenue</span>
+        <span class="gx-big" data-draw="o-rev" data-source="period_revenue" data-field="revenue">—</span>
+        <div class="gx-meter"><i data-draw="m-rev" data-source="period_revenue" data-field="revenue_pct"></i></div>
+        <span class="gx-sub"><span data-draw="o-rev-pct" data-source="period_revenue" data-field="revenue_pct">—</span>% of <span data-draw="o-rev-target" data-source="period_revenue" data-field="revenue_target">—</span></span>
+        <span class="gx-sub"><span data-draw="o-rev-ch" data-source="period_revenue" data-field="revenue_change_pct">—</span>% vs before</span>
+      </div>
+      <div class="gx-tile" id="tile-full">
+        <span class="gx-label">Conversions</span>
+        <span class="gx-big" data-draw="o-full" data-source="period_revenue" data-field="full_conv">—</span>
+        <div class="gx-meter"><i data-draw="m-full" data-source="period_revenue" data-field="full_conv"></i></div>
+        <span class="gx-sub">Target <span data-draw="o-full-t" data-source="period_revenue" data-field="full_target">—</span> · <span data-draw="o-full-ren" data-source="period_revenue" data-field="renewals_n">—</span> via trial</span>
+        <span class="gx-sub"><span data-draw="o-full-ch" data-source="period_revenue" data-field="full_conv_change">—</span> vs before</span>
+      </div>
+      <div class="gx-tile" id="tile-trial">
+        <span class="gx-label">Trials started</span>
+        <span class="gx-big" data-draw="o-trial" data-source="period_revenue" data-field="trial_n">—</span>
+        <div class="gx-meter"><i data-draw="m-trial" data-source="period_revenue" data-field="trial_n"></i></div>
+        <span class="gx-sub">Target <span data-draw="o-trial-t" data-source="period_revenue" data-field="trial_target">—</span></span>
+        <span class="gx-sub"><span data-draw="o-trial-ch" data-source="period_revenue" data-field="trial_change">—</span> vs before</span>
+      </div>
+      <div class="gx-tile" id="tile-seats">
+        <span class="gx-label">Workshop seats</span>
+        <span class="gx-big" data-draw="o-seats" data-source="period_revenue" data-field="seats">—</span>
+        <div class="gx-meter"><i data-draw="m-seats" data-source="period_revenue" data-field="seats"></i></div>
+        <span class="gx-sub">Target <span data-draw="o-seats-t" data-source="period_revenue" data-field="seats_target">—</span></span>
+        <span class="gx-sub"><span data-draw="o-seats-ch" data-source="period_revenue" data-field="seats_change">—</span> vs before</span>
+      </div>
+      <div class="gx-tile" id="tile-ws-program">
+        <span class="gx-label">Workshop → program</span>
+        <span class="gx-big"><span data-draw="o-wsp" data-source="period_leads" data-field="conversion_pct">—</span><span class="gx-unit">%</span></span>
+        <span class="gx-sub"><span data-draw="o-wsp-n" data-source="period_leads" data-field="converted">—</span> of <span data-draw="o-wsp-d" data-source="period_leads" data-field="leads">—</span> attendees</span>
+        <span class="gx-sub">Past result about 1 in 18</span>
+      </div>
+      <div class="gx-tile" id="tile-cpql">
+        <span class="gx-label">Cost per lead</span>
+        <span class="gx-big" data-draw="o-cpql" data-source="period_leads" data-field="cpql">—</span>
+        <span class="gx-sub">Per qualified lead · ceiling <span data-draw="o-cpql-cap" data-source="targets" data-field="value">—</span></span>
+        <span class="gx-sub"><span data-draw="o-cpql-ch" data-source="period_leads" data-field="cpql_change">—</span> vs before</span>
+      </div>
+      <div class="gx-tile" id="tile-days">
+        <span class="gx-label">Days to decide</span>
+        <span class="gx-big"><span data-draw="o-days" data-source="period_leads" data-field="days_to_decide">—</span><span class="gx-unit"> days</span></span>
+        <span class="gx-sub">Target <span data-draw="o-days-t" data-source="targets" data-field="value">—</span> or fewer</span>
+        <span class="gx-sub">First contact to first payment</span>
+      </div>
+      <div class="gx-tile" id="tile-invoices">
+        <span class="gx-label">Unpaid invoices</span>
+        <span class="gx-big" data-draw="o-inv-amt" data-source="invoice_summary" data-field="amount">—</span>
+        <span class="gx-sub"><span data-draw="o-inv-n" data-source="invoice_summary" data-field="count">—</span> invoices</span>
+        <span class="gx-sub"><span data-draw="o-inv-red" data-source="invoice_summary" data-field="red">—</span> unpaid 10+ days</span>
+      </div>
+    </div>
+    <p class="gx-note">A conversion counts only when a family pays for the full term. A family on a 3-month trial is in the Trial state until it renews into the full program, and then counts as converted.</p>
+
+    <div class="gx-grid2">
+      <div class="gx-card" id="revenue-by-month">
+        <div class="gx-card-h"><h2>Revenue by stream, by month</h2>
+          <div class="gx-legend"><span><i class="gx-sw gx-c-full"></i>Full program</span><span><i class="gx-sw gx-c-trial"></i>Trial</span><span><i class="gx-sw gx-c-ws"></i>Workshops</span><span><i class="gx-key"></i>Target</span></div></div>
+        <div data-draw="month-revenue" data-source="monthly" class="gx-chart dash-skeleton"></div>
+      </div>
+      <div class="gx-card" id="onboarded-by-month">
+        <div class="gx-card-h"><h2>Students onboarded, by month</h2>
+          <div class="gx-legend"><span><i class="gx-sw gx-c-full"></i>Full program</span><span><i class="gx-sw gx-c-trial"></i>Trial</span><span><i class="gx-key"></i>Target</span></div></div>
+        <div data-draw="month-onboarded" data-source="monthly" class="gx-chart dash-skeleton"></div>
+      </div>
+    </div>
+
+    <div class="gx-card" id="streams-vs-target">
+      <div class="gx-card-h"><h2>Each revenue stream against its target</h2><span class="gx-note">Bar: collected · tick: the period's target</span></div>
+      <div data-draw="streams" data-source="stream_revenue" class="gx-chart gx-chart--xs dash-skeleton"></div>
+    </div>
+  </section>
+
+  <!-- Revenue -->
+  <section class="gx-section" id="revenue" data-page="revenue" hidden>
+    <div class="gx-tiles">
+      <div class="gx-tile"><span class="gx-label">Full program revenue</span><span class="gx-big" data-draw="r-full" data-source="period_revenue" data-field="full_rev">—</span><span class="gx-sub">Includes trials renewed to full</span></div>
+      <div class="gx-tile"><span class="gx-label">Trial revenue</span><span class="gx-big" data-draw="r-trial" data-source="period_revenue" data-field="trial_rev">—</span><span class="gx-sub"><span data-draw="r-trial-n" data-source="period_revenue" data-field="trial_n">—</span> trials started</span></div>
+      <div class="gx-tile"><span class="gx-label">Workshop revenue</span><span class="gx-big" data-draw="r-ws" data-source="period_revenue" data-field="workshop_rev">—</span><span class="gx-sub"><span data-draw="r-share" data-source="period_revenue" data-field="workshop_share">—</span>% of all revenue</span></div>
+      <div class="gx-tile"><span class="gx-label">Trials renewed to full</span><span class="gx-big"><span data-draw="r-renew" data-source="period_revenue" data-field="renewal_rate">—</span><span class="gx-unit">%</span></span><span class="gx-sub"><span data-draw="r-renew-n" data-source="period_revenue" data-field="renewed">—</span> of <span data-draw="r-ended-n" data-source="period_revenue" data-field="trials_ended">—</span> trials that ended</span></div>
+    </div>
+    <div class="gx-grid3">
+      <div class="gx-card" id="full-by-month"><div class="gx-card-h"><h2>Full program revenue</h2><span class="gx-legend"><span><i class="gx-key"></i>Target</span></span></div><div data-draw="m-full-rev" data-source="monthly" class="gx-chart gx-chart--s dash-skeleton"></div></div>
+      <div class="gx-card" id="trial-by-month"><div class="gx-card-h"><h2>Trial revenue</h2><span class="gx-legend"><span><i class="gx-key"></i>Target</span></span></div><div data-draw="m-trial-rev" data-source="monthly" class="gx-chart gx-chart--s dash-skeleton"></div></div>
+      <div class="gx-card" id="ws-by-month"><div class="gx-card-h"><h2>Workshop revenue</h2><span class="gx-legend"><span><i class="gx-key"></i>Target</span></span></div><div data-draw="m-ws-rev" data-source="monthly" class="gx-chart gx-chart--s dash-skeleton"></div></div>
+    </div>
+    <div class="gx-grid3">
+      <div class="gx-card" id="workshops">
+        <div class="gx-card-h"><h2>Workshop break-even</h2><span class="gx-legend"><span><i class="gx-key"></i>Break-even</span></span></div>
+        <p class="gx-note">Seat revenue ÷ (ad spend + <span data-draw="venue" data-source="targets" data-field="value">—</span> venue). Hover for seats and spend.</p>
+        <div data-draw="breakeven" data-source="workshop_table" class="gx-chart gx-chart--s dash-skeleton"></div>
+        <p class="gx-empty gx-ws-empty" hidden>No workshops in this period.</p>
+      </div>
+      <div class="gx-card" id="unpaid-invoices">
+        <h2>Unpaid invoices today</h2>
+        <p class="gx-note">Amber from 5 days, red from 10.</p>
+        <div class="gx-tablewrap">
+          <table data-source="open_invoices" data-row-key="invoice_id">
+            <thead><tr><th data-field="invoice_id">Invoice</th><th data-field="plan">Plan</th><th class="n" data-field="amount">Amount</th><th class="n" data-field="days_unpaid">Days</th></tr></thead>
+            <tbody data-draw="invoice-rows"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="gx-card" id="renewals">
+        <h2>Trials ending in 30 days</h2>
+        <p class="gx-note">Yellow from 30 days left, amber from 15, red from 7.</p>
+        <div class="gx-tablewrap">
+          <table data-source="renewals_due" data-row-key="trial_id">
+            <thead><tr><th data-field="trial_id">Trial</th><th data-field="family">Family</th><th data-field="end">Ends</th><th class="n" data-field="days_left">Days left</th></tr></thead>
+            <tbody data-draw="renewal-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Funnel -->
+  <section class="gx-section" id="funnel" data-page="funnel" hidden>
+    <div class="gx-segs" role="group" aria-label="Entry path">
+      <button class="gx-seg" data-path="All" aria-pressed="true">Both paths</button>
+      <button class="gx-seg" data-path="Ads" aria-pressed="false">Ads and website form</button>
+      <button class="gx-seg" data-path="Workshop" aria-pressed="false">Workshop</button>
+      <span class="gx-note">Families who came in during the period, and how far they got. Both paths meet at the Ambition interview. Converted means paid for the full term, directly or by renewing a trial; a family on a paid trial stays in the Trial state until it renews.</span>
+    </div>
+    <div class="gx-grid2">
+      <div class="gx-card" id="funnel-chart">
+        <div class="gx-card-h"><h2>Funnel, step by step</h2><span class="gx-note">Thin bar: period before · right: share lost, biggest in red</span></div>
+        <div data-draw="funnel" data-source="period_leads" class="gx-chart dash-skeleton"></div>
+      </div>
+      <div class="gx-section">
+        <div class="gx-card" id="interview-outcomes">
+          <div class="gx-card-h"><h2>Ambition interview outcomes</h2><span class="gx-note">Rejected = selection working · dropped = loss to fix</span></div>
+          <div data-draw="outcomes" data-source="period_leads" class="gx-chart gx-chart--xs dash-skeleton"></div>
+        </div>
+        <div class="gx-card" id="lead-sources">
+          <div class="gx-card-h"><h2>Where families came from</h2><span class="gx-note">Call show-up <b data-draw="f-showup" data-source="period_leads" data-field="show_up_pct">—</b>% · days to decide <b data-draw="f-days" data-source="period_leads" data-field="days_to_decide">—</b></span></div>
+          <div data-draw="sources" data-source="period_leads" class="gx-chart gx-chart--xs dash-skeleton"></div>
+        </div>
+      </div>
+    </div>
+    <div class="gx-card" id="aging-leads">
+      <div class="gx-card-h"><h2>Open leads past <span data-draw="aging-days" data-source="targets" data-field="value">—</span> days</h2><span class="gx-note">Still in play but older than the target for deciding</span></div>
+      <div class="gx-grid2">
+      <div id="aging-trend">
+        <div class="gx-card-h"><span class="gx-note">Each week, open leads by age</span>
+          <div class="gx-legend"><span><i class="gx-sw gx-c-a1"></i>46–60 days</span><span><i class="gx-sw gx-c-a2"></i>61–90 days</span><span><i class="gx-sw gx-c-a3"></i>Over 90 days</span></div></div>
+        <div data-draw="aging-trend" data-source="aging_trend" class="gx-chart gx-chart--s dash-skeleton"></div>
+      </div>
+      <div class="gx-tablewrap">
+        <table data-source="aging_leads" data-row-key="lead_id">
+          <thead><tr><th data-field="lead_id">Lead</th><th data-field="path">Came from</th><th data-field="stage">Furthest step</th><th data-field="last_step">Last step on</th><th class="n" data-field="days_open">Days open</th></tr></thead>
+          <tbody data-draw="aging-rows"></tbody>
+        </table>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Campaigns -->
+  <section class="gx-section" id="campaigns" data-page="campaigns" hidden>
+    <div class="gx-grid2">
+      <div class="gx-card" id="campaign-table">
+        <div class="gx-card-h"><h2>Campaigns</h2><span class="gx-note">Click a campaign to see its performance below</span></div>
+        <div class="gx-tablewrap">
+          <table class="gx-click gx-campaign-table" data-source="period_campaigns" data-row-key="period,campaign">
+            <thead><tr><th data-field="campaign">Campaign</th><th class="n" data-field="spend">Spend</th><th class="n" data-field="ctr">Click %</th><th class="n" data-field="frequency">Freq.</th><th class="n" data-field="results">Results</th><th class="n" data-field="cost">Cost / result</th></tr></thead>
+            <tbody data-draw="campaign-rows"></tbody>
+          </table>
+        </div>
+        <p class="gx-note">Results: qualified leads for program campaigns, seats sold for workshop campaigns. Ceilings <span data-draw="c-cpql" data-source="targets" data-field="value">—</span> and <span data-draw="c-seat" data-source="targets" data-field="value">—</span>.</p>
+      </div>
+      <div class="gx-card" id="ctr-chart">
+        <div class="gx-card-h"><h2>Click rate by ad, best to worst</h2>
+          <div class="gx-legend"><span><i class="gx-sw gx-c-full"></i>Program ad</span><span><i class="gx-sw gx-c-ws"></i>Workshop ad</span></div></div>
+        <div data-draw="ctr" data-source="period_ads" class="gx-chart dash-skeleton"></div>
+      </div>
+    </div>
+
+    <div class="gx-card gx-detail" id="campaign-detail">
+      <div class="gx-card-h">
+        <span class="gx-detail-name" data-draw="d-name" data-source="period_campaigns" data-field="campaign">—</span>
+        <span class="gx-strip">
+          <span><b data-draw="d-spend" data-source="period_campaigns" data-field="spend">—</b> spend</span>
+          <span><b data-draw="d-ctr" data-source="period_campaigns" data-field="ctr">—</b>% click rate</span>
+          <span>frequency <b data-draw="d-freq" data-source="period_campaigns" data-field="frequency">—</b></span>
+          <span><b data-draw="d-results" data-source="period_campaigns" data-field="results">—</b></span>
+          <span><b data-draw="d-cost" data-source="period_campaigns" data-field="cost">—</b> per result</span>
+        </span>
+      </div>
+      <div class="gx-grid3">
+        <div><h2>Results per week</h2><div data-draw="d-week-results" data-source="campaign_weekly" class="gx-chart gx-chart--s dash-skeleton"></div></div>
+        <div><h2>Cost per result per week</h2><div data-draw="d-week-cost" data-source="campaign_weekly" class="gx-chart gx-chart--s dash-skeleton"></div></div>
+        <div><h2>Frequency</h2><div data-draw="d-week-freq" data-source="campaign_weekly" class="gx-chart gx-chart--s dash-skeleton"></div></div>
+      </div>
+      <p class="gx-note">Dashed lines: the cost ceiling, and the frequency of 3 that triggers a refresh.</p>
+      <div class="gx-tablewrap">
+        <table data-source="period_ads" data-row-key="period,ad">
+          <thead><tr><th data-field="action">Action</th><th data-field="ad">Ad</th><th class="n" data-field="spend">Spend</th><th class="n" data-field="ctr">Click %</th><th class="n" data-field="frequency">Freq.</th><th class="n" data-field="cost">Cost / result</th><th data-field="reason">Why</th></tr></thead>
+          <tbody data-draw="d-ad-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="gx-card" id="landing-pages">
+      <div class="gx-card-h"><h2>Landing pages: drop-off</h2><span class="gx-note">Left without filling a form or booking · thin bar: period before</span></div>
+      <div data-draw="pages" data-source="period_pages" class="gx-chart gx-chart--xs dash-skeleton"></div>
+    </div>
+  </section>
+
+  <!-- Actions -->
+  <section class="gx-section" id="actions" data-page="actions" hidden>
+    <div class="gx-tiles">
+      <div class="gx-tile"><span class="gx-label"><span class="gx-pill gx-g">Scale</span> under the ceiling</span><span class="gx-big" data-draw="a-scale" data-source="action_counts" data-field="scale">—</span><span class="gx-sub"><span data-draw="a-scale-s" data-source="action_counts" data-field="scale_spend">—</span> spend</span></div>
+      <div class="gx-tile"><span class="gx-label"><span class="gx-pill gx-a">Refresh</span> frequency <span data-draw="a-freq" data-source="targets" data-field="value">—</span>+</span><span class="gx-big" data-draw="a-refresh" data-source="action_counts" data-field="refresh">—</span><span class="gx-sub"><span data-draw="a-refresh-s" data-source="action_counts" data-field="refresh_spend">—</span> spend</span></div>
+      <div class="gx-tile"><span class="gx-label"><span class="gx-pill gx-r">Drop</span> over ceiling 2 weeks</span><span class="gx-big" data-draw="a-drop" data-source="action_counts" data-field="drop">—</span><span class="gx-sub"><span data-draw="a-drop-s" data-source="action_counts" data-field="drop_spend">—</span> spend</span></div>
+      <div class="gx-tile"><span class="gx-label"><span class="gx-pill gx-n">Watch</span> over, under 2 weeks</span><span class="gx-big" data-draw="a-watch" data-source="action_counts" data-field="watch">—</span><span class="gx-sub"><span data-draw="a-watch-s" data-source="action_counts" data-field="watch_spend">—</span> spend</span></div>
+    </div>
+    <div class="gx-card" id="action-list">
+      <div class="gx-card-h"><h2>Running ads by spend, with what to do</h2><span class="gx-note">Click a row to open its campaign</span></div>
+      <div class="gx-tablewrap gx-tablewrap--tall">
+        <table class="gx-click gx-action-table" data-source="period_ads" data-row-key="period,ad">
+          <thead><tr><th data-field="action">Action</th><th data-field="ad">Ad</th><th data-field="campaign">Campaign</th><th class="n" data-field="spend">Spend</th><th data-field="reason">Why</th></tr></thead>
+          <tbody data-draw="action-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <p class="gx-foot">Sample data made up for illustration (Aug 2026 – Feb 2027, as of <span data-draw="as-of" data-source="period_list">—</span>). Not Alcovia's numbers.</p>
+</div>
+
+<script>
+// ---------- calculations ----------
+dash.calc('period_list', {
+  title: 'Periods the selector can pick',
+  description: 'Every month-to-month range from the first month of data to the as-of date, with the same-length period just before each, and how many months of target it covers.',
+  inputs: ['targets'],
+  fn: (targets) => {
+    const t = Object.fromEntries(targets.map((r) => [r.key, r.value]));
+    const DAY = 864e5, ms = (s) => Date.parse(s + 'T00:00:00Z'), iso = (v) => new Date(v).toISOString().slice(0, 10);
+    const months = [];
+    for (let [y, m] = t.first_month.split('-').map(Number); `${y}-${String(m).padStart(2, '0')}` <= t.as_of.slice(0, 7); m === 12 ? (y++, m = 1) : m++) months.push(`${y}-${String(m).padStart(2, '0')}`);
+    const monthEnd = (mo) => iso(Date.UTC(+mo.slice(0, 4), +mo.slice(5, 7), 0));
+    const out = [];
+    months.forEach((a, i) => months.slice(i).forEach((b) => {
+      const start = a + '-01', end = monthEnd(b) < t.as_of ? monthEnd(b) : t.as_of;
+      const days = (ms(end) - ms(start)) / DAY + 1;
+      const covered = months.slice(i, months.indexOf(b) + 1).reduce((s, mo) => {
+        const e = monthEnd(mo) < t.as_of ? monthEnd(mo) : t.as_of;
+        return s + ((ms(e) - ms(mo + '-01')) / DAY + 1) / (+monthEnd(mo).slice(8));
+      }, 0);
+      out.push({ period: `${a}..${b}`, from: a, to: b, start, end, days, months_of_target: Math.round(covered * 100) / 100,
+        prev_start: iso(ms(start) - days * DAY), prev_end: iso(ms(start) - DAY), as_of: t.as_of });
+    }));
+    return out;
+  },
+});
+
+dash.calc('period_revenue', {
+  title: 'Revenue and sign-ups per period',
+  description: 'Payments received in each period and the period before, split into the three streams (full program including trial renewals, trials, workshops), against the monthly targets scaled to the period; trials that ended in the period and how many renewed.',
+  inputs: ['period_list', 'payments', 'trials', 'targets'],
+  fn: (period_list, payments, trials, targets) => {
+    const t = Object.fromEntries(targets.map((r) => [r.key, r.value]));
+    const sum = (a) => a.reduce((s, p) => s + Number(p.amount), 0);
+    const count = (a, type) => a.filter((p) => p.type === type).length;
+    const change = (a, b) => (b ? Math.round((100 * (a - b)) / b) : null);
+    return period_list.map((p) => {
+      const cur = payments.filter((x) => x.date >= p.start && x.date <= p.end);
+      const prev = payments.filter((x) => x.date >= p.prev_start && x.date <= p.prev_end);
+      const hasPrev = p.prev_start >= period_list[0].start;
+      const revenue = sum(cur), revenue_prev = hasPrev ? sum(prev) : null;
+      const revenue_target = Math.round(t.revenue_month * p.months_of_target);
+      const ended = trials.filter((x) => x.end >= p.start && x.end <= p.end && x.status !== 'In trial');
+      const renewed = ended.filter((x) => x.status === 'Renewed').length;
+      const r = { period: p.period, revenue, revenue_prev, revenue_target, revenue_pct: Math.round((100 * revenue) / revenue_target),
+        revenue_change_pct: change(revenue, revenue_prev),
+        full_n: count(cur, 'Full program'), trial_n: count(cur, 'Trial'), seats: count(cur, 'Workshop seat'), renewals_n: count(cur, 'Renewal'),
+        full_target: Math.round(t.full_month * p.months_of_target), trial_target: Math.round(t.trial_month * p.months_of_target), seats_target: Math.round(t.seats_month * p.months_of_target),
+        full_rev: sum(cur.filter((x) => x.type === 'Full program' || x.type === 'Renewal')), trial_rev: sum(cur.filter((x) => x.type === 'Trial')),
+        workshop_rev: sum(cur.filter((x) => x.type === 'Workshop seat')),
+        trials_ended: ended.length, renewed, renewal_rate: ended.length ? Math.round((100 * renewed) / ended.length) : null };
+      r.workshop_share = revenue ? Math.round((100 * r.workshop_rev) / revenue) : null;
+      r.full_conv = r.full_n + r.renewals_n;
+      r.full_conv_change = hasPrev ? r.full_conv - count(prev, 'Full program') - count(prev, 'Renewal') : null;
+      r.full_change = hasPrev ? r.full_n - count(prev, 'Full program') : null;
+      r.trial_change = hasPrev ? r.trial_n - count(prev, 'Trial') : null;
+      r.seats_change = hasPrev ? r.seats - count(prev, 'Workshop seat') : null;
+      return r;
+    });
+  },
+});
+
+dash.calc('stream_revenue', {
+  title: 'Revenue per stream against target',
+  description: 'For each period, each of the three streams: revenue collected, its target (monthly volume target × price, scaled to the period), percent of target and share of all revenue.',
+  inputs: ['period_revenue', 'period_list', 'targets'],
+  fn: (period_revenue, period_list, targets) => {
+    const t = Object.fromEntries(targets.map((r) => [r.key, r.value]));
+    const out = [];
+    period_revenue.forEach((r) => {
+      const m = period_list.find((p) => p.period === r.period).months_of_target;
+      [['Full program', r.full_rev, t.full_month * t.full_price], ['Trial', r.trial_rev, t.trial_month * t.trial_price], ['Workshops', r.workshop_rev, t.seats_month * t.seat_price]]
+        .forEach(([stream, revenue, monthly]) => {
+          const target = Math.round(monthly * m);
+          out.push({ period: r.period, stream, revenue, target, pct_of_target: Math.round((100 * revenue) / target), share: r.revenue ? Math.round((100 * revenue) / r.revenue) : null });
+        });
+    });
+    return out;
+  },
+});
+
+dash.calc('period_leads', {
+  title: 'Funnel per period and entry path',
+  description: 'Families who came in during each period (and the period before), how far they got, interview outcomes, show-up rate, and program ad spend per qualified lead. A family converts only when it pays for the full term: the full program, or a trial that renews into it. A family that paid for a trial and has not renewed is in the Trial state, not converted. Days to decide runs from first contact to the first payment (trial or full), for families who paid in the period, since the 3-month trial itself is not decision time.',
+  inputs: ['period_list', 'leads', 'ads_daily', 'trials'],
+  fn: (period_list, leads, ads_daily, trials) => {
+    const renewedOn = {};
+    trials.forEach((t) => { if (t.status === 'Renewed') renewedOn['L' + t.trial_id.slice(2)] = t.end; });
+    const convDate = (x) => (x.plan === 'Full program' && x.paid ? x.paid : renewedOn[x.lead_id] || null);
+    const stats = (a) => {
+      const n = (f) => a.filter((x) => x[f]).length;
+      return { leads: a.length, qualified: n('qualified'), booked: n('call_booked'), attended: n('call_attended'), interview: n('interview'),
+        passed: a.filter((x) => x.interview_outcome === 'Passed').length, rejected: a.filter((x) => x.interview_outcome === 'Rejected by Alcovia').length,
+        dropped: a.filter((x) => x.interview_outcome === 'Dropped by family').length, architect: n('architect'), paid: n('paid'),
+        in_trial: a.filter((x) => x.plan === 'Trial' && x.paid && !renewedOn[x.lead_id]).length,
+        paid_trial: a.filter((x) => x.plan === 'Trial' && x.paid).length, direct_full: a.filter((x) => x.plan === 'Full program' && x.paid).length, converted: a.filter((x) => convDate(x)).length,
+        from_ads: a.filter((x) => x.source === 'Paid').length, organic: a.filter((x) => x.source === 'Organic').length, workshop_leads: a.filter((x) => x.path === 'Workshop').length };
+    };
+    const days = (a, b) => (Date.parse(b) - Date.parse(a)) / 864e5;
+    const out = [];
+    period_list.forEach((p) => {
+      const hasPrev = p.prev_start >= period_list[0].start;
+      const spend = (s, e) => ads_daily.filter((x) => x.type === 'Program' && x.date >= s && x.date <= e).reduce((t, x) => t + Number(x.spend), 0);
+      const qual = (s, e) => leads.filter((x) => x.source === 'Paid' && x.qualified && x.qualified >= s && x.qualified <= e).length;
+      const q = qual(p.start, p.end), qp = qual(p.prev_start, p.prev_end);
+      const cpql = q ? Math.round(spend(p.start, p.end) / q) : null;
+      const cpql_prev = hasPrev && qp ? Math.round(spend(p.prev_start, p.prev_end) / qp) : null;
+      ['All', 'Ads', 'Workshop'].forEach((path) => {
+        const on = (x) => path === 'All' || x.path === path;
+        const cur = leads.filter((x) => on(x) && x.created >= p.start && x.created <= p.end);
+        const prev = leads.filter((x) => on(x) && x.created >= p.prev_start && x.created <= p.prev_end);
+        const s = stats(cur), sp = stats(prev);
+        const r = { period: p.period, path, ...s };
+        Object.keys(sp).forEach((k) => { r[k + '_prev'] = hasPrev ? sp[k] : null; });
+        r.conversion_pct = s.leads ? Math.round((1000 * s.converted) / s.leads) / 10 : null;
+        r.show_up_pct = s.booked ? Math.round((100 * s.attended) / s.booked) : null;
+        const paidIn = leads.filter((x) => on(x) && x.paid && x.paid >= p.start && x.paid <= p.end);
+        r.days_to_decide = paidIn.length ? Math.round(paidIn.reduce((t, x) => t + days(x.created, x.paid), 0) / paidIn.length) : null;
+        r.cpql = path === 'Workshop' ? null : cpql;
+        r.cpql_change = path === 'Workshop' || cpql == null || cpql_prev == null ? null : cpql - cpql_prev;
+        out.push(r);
+      });
+    });
+    return out;
+  },
+});
+
+dash.calc('period_ads', {
+  title: 'Ads per period, with what to do',
+  description: 'Each ad’s spend, click rate, latest frequency, leads, qualified leads and seats in the period; cost per result against its ceiling, and Scale, Refresh, Drop or Watch with the reason. Drop needs the last 2 weeks and the 2 before both over the ceiling, or leads with none qualified.',
+  inputs: ['period_list', 'ads_daily', 'leads', 'payments', 'targets'],
+  fn: (period_list, ads_daily, leads, payments, targets) => {
+    const t = Object.fromEntries(targets.map((r) => [r.key, r.value]));
+    const inr = (v) => '₹' + Math.round(v).toLocaleString('en-IN');
+    const iso = (v) => new Date(v).toISOString().slice(0, 10), DAY = 864e5;
+    const out = [];
+    period_list.forEach((p) => {
+      const rows = ads_daily.filter((x) => x.date >= p.start && x.date <= p.end);
+      [...new Set(rows.map((x) => x.ad))].forEach((ad) => {
+        const a = rows.filter((x) => x.ad === ad);
+        const type = a[0].type, ceiling = type === 'Program' ? t.cpql : t.cost_per_seat;
+        const results = (s, e) => (type === 'Program'
+          ? leads.filter((x) => x.ad === ad && x.source === 'Paid' && x.qualified && x.qualified >= s && x.qualified <= e).length
+          : payments.filter((x) => x.ad === ad && x.type === 'Workshop seat' && x.date >= s && x.date <= e).length);
+        const spendIn = (s, e) => ads_daily.filter((x) => x.ad === ad && x.date >= s && x.date <= e).reduce((u, x) => u + Number(x.spend), 0);
+        const spend = a.reduce((u, x) => u + Number(x.spend), 0);
+        const imps = a.reduce((u, x) => u + Number(x.impressions), 0), clicks = a.reduce((u, x) => u + Number(x.clicks), 0);
+        const last = a[a.length - 1];
+        const leadsN = type === 'Program' ? leads.filter((x) => x.ad === ad && x.source === 'Paid' && x.created >= p.start && x.created <= p.end).length : null;
+        const qualified = type === 'Program' ? results(p.start, p.end) : null;
+        const seats = type === 'Workshop' ? results(p.start, p.end) : null;
+        const res = type === 'Program' ? qualified : seats;
+        const cost = res ? Math.round(spend / res) : null;
+        const e = Date.parse(p.end), w1 = [iso(e - 13 * DAY), p.end], w2 = [iso(e - 27 * DAY), iso(e - 14 * DAY)];
+        const c1 = spendIn(...w1) / Math.max(results(...w1), 0.0001), c2 = spendIn(...w2) / Math.max(results(...w2), 0.0001);
+        const running = last.date === p.end;
+        const unit = type === 'Program' ? 'per qualified lead' : 'per seat';
+        let action = 'Watch', reason = `${cost ? inr(cost) : 'No results'} ${unit} this period, over ${inr(ceiling)} for under 2 weeks`;
+        if (!running) { action = 'Ended'; reason = `Stopped running on ${last.date}`; }
+        else if (type === 'Program' && leadsN >= 5 && qualified === 0) { action = 'Drop'; reason = `${leadsN} leads, none qualified`; }
+        else if (c1 > ceiling && c2 > ceiling) { action = 'Drop'; reason = `${c1 > 1e6 ? 'No results' : inr(c1)} ${unit} in the last 2 weeks, ${c2 > 1e6 ? 'no results' : inr(c2)} the 2 before; ceiling ${inr(ceiling)}`; }
+        else if (last.frequency >= t.frequency) { action = 'Refresh'; reason = `Frequency ${last.frequency.toFixed(1)}, at or over ${t.frequency}`; }
+        else if (cost != null && cost <= ceiling) { action = 'Scale'; reason = `${inr(cost)} ${unit}, under ${inr(ceiling)}`; }
+        out.push({ period: p.period, ad, campaign: a[0].campaign, type, spend, impressions: imps, clicks, ctr: Math.round((10000 * clicks) / imps) / 100,
+          frequency: last.frequency, leads: leadsN, qualified, seats, cost, ceiling, action, reason });
+      });
+    });
+    return out;
+  },
+});
+
+dash.calc('period_campaigns', {
+  title: 'Campaigns per period',
+  description: 'Each campaign’s ads added up for the period: spend, click rate, the highest frequency among its ads, results (qualified leads or seats) and cost per result against the ceiling.',
+  inputs: ['period_ads'],
+  fn: (period_ads) => {
+    const out = [];
+    [...new Set(period_ads.map((x) => x.period))].forEach((period) => {
+      const a = period_ads.filter((x) => x.period === period);
+      [...new Set(a.map((x) => x.campaign))].forEach((campaign) => {
+        const c = a.filter((x) => x.campaign === campaign);
+        const spend = c.reduce((s, x) => s + x.spend, 0), imps = c.reduce((s, x) => s + x.impressions, 0), clicks = c.reduce((s, x) => s + x.clicks, 0);
+        const results = c.reduce((s, x) => s + (x.type === 'Program' ? x.qualified : x.seats), 0);
+        out.push({ period, campaign, type: c[0].type, ads: c.length, spend, ctr: Math.round((10000 * clicks) / imps) / 100,
+          frequency: Math.max(...c.map((x) => x.frequency)), results, cost: results ? Math.round(spend / results) : null, ceiling: c[0].ceiling });
+      });
+    });
+    return out;
+  },
+});
+
+dash.calc('campaign_weekly', {
+  title: 'Campaigns by week',
+  description: 'Per campaign per week (Monday start): spend, results (qualified leads or seats sold), cost per result, and the highest running frequency among its ads that week.',
+  inputs: ['ads_daily', 'leads', 'payments'],
+  fn: (ads_daily, leads, payments) => {
+    const DAY = 864e5, iso = (v) => new Date(v).toISOString().slice(0, 10);
+    const monday = (d) => { const ms = Date.parse(d + 'T00:00:00Z'); return iso(ms - ((new Date(ms).getUTCDay() + 6) % 7) * DAY); };
+    const adInfo = {}; ads_daily.forEach((x) => { adInfo[x.ad] = x; });
+    const m = new Map();
+    const row = (campaign, week) => {
+      const k = campaign + '|' + week;
+      if (!m.has(k)) m.set(k, { campaign, week, type: null, spend: 0, results: 0, frequency: 0 });
+      return m.get(k);
+    };
+    ads_daily.forEach((x) => { const r = row(x.campaign, monday(x.date)); r.type = x.type; r.spend += Number(x.spend); r.frequency = Math.max(r.frequency, Number(x.frequency)); });
+    leads.forEach((x) => { if (x.source === 'Paid' && x.qualified && adInfo[x.ad] && x.qualified >= '2026-08-01') row(adInfo[x.ad].campaign, monday(x.qualified)).results++; });
+    payments.forEach((x) => { if (x.type === 'Workshop seat' && x.ad && adInfo[x.ad]) row(adInfo[x.ad].campaign, monday(x.date)).results++; });
+    return [...m.values()].filter((r) => r.spend > 0).map((r) => ({ ...r, cost: r.results ? Math.round(r.spend / r.results) : null }))
+      .sort((a, b) => a.week.localeCompare(b.week));
+  },
+});
+
+dash.calc('period_pages', {
+  title: 'Landing pages per period',
+  description: 'Visitors, drop-off rate and average load times per page in each period, with the drop-off rate in the period before.',
+  inputs: ['period_list', 'pages'],
+  fn: (period_list, pages) => {
+    const out = [];
+    period_list.forEach((p) => {
+      [...new Set(pages.map((x) => x.page))].forEach((page) => {
+        const agg = (s, e) => {
+          const a = pages.filter((x) => x.page === page && x.date >= s && x.date <= e);
+          const v = a.reduce((t, x) => t + Number(x.visitors), 0);
+          return { v, drop: v ? Math.round((1000 * a.reduce((t, x) => t + Number(x.dropoffs), 0)) / v) / 10 : null,
+            mob: a.length ? Math.round((100 * a.reduce((t, x) => t + Number(x.load_mobile_s), 0)) / a.length) / 100 : null,
+            desk: a.length ? Math.round((100 * a.reduce((t, x) => t + Number(x.load_desktop_s), 0)) / a.length) / 100 : null };
+        };
+        const c = agg(p.start, p.end), b = agg(p.prev_start, p.prev_end);
+        out.push({ period: p.period, page, visitors: c.v, dropoff_pct: c.drop, dropoff_prev: b.drop, load_mobile_s: c.mob, load_desktop_s: c.desk });
+      });
+    });
+    return out;
+  },
+});
+
+dash.calc('monthly', {
+  title: 'Revenue and sign-ups by month',
+  description: 'Each month: revenue per stream (full program including trial renewals, trials, workshops), sign-ups by plan, and the month’s targets (the current month counts only the days up to the as-of date).',
+  inputs: ['payments', 'targets'],
+  fn: (payments, targets) => {
+    const t = Object.fromEntries(targets.map((r) => [r.key, r.value]));
+    const months = [...new Set(payments.map((x) => x.date.slice(0, 7)))].sort();
+    return months.map((m) => {
+      const a = payments.filter((x) => x.date.slice(0, 7) === m);
+      const s = (...types) => a.filter((x) => types.includes(x.type)).reduce((u, x) => u + Number(x.amount), 0);
+      const n = (type) => a.filter((x) => x.type === type).length;
+      const dim = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate();
+      const share = m === t.as_of.slice(0, 7) ? +t.as_of.slice(8) / dim : 1;
+      return { month: m, full: s('Full program', 'Renewal'), renewal: s('Renewal'), trial: s('Trial'), workshop: s('Workshop seat'),
+        total: a.reduce((u, x) => u + Number(x.amount), 0), target: Math.round(t.revenue_month * share),
+        full_target: Math.round(t.full_month * t.full_price * share), trial_target: Math.round(t.trial_month * t.trial_price * share),
+        workshop_target: Math.round(t.seats_month * t.seat_price * share),
+        full_n: n('Full program'), trial_n: n('Trial'), seats: n('Workshop seat'), signups_target: Math.round((t.full_month + t.trial_month) * share * 10) / 10 };
+    });
+  },
+});
+
+dash.calc('open_invoices', {
+  title: 'Unpaid invoices today',
+  description: 'Invoices issued and not yet paid on the as-of date, with days unpaid; amber from 5 days, red from 10.',
+  inputs: ['invoices', 'targets'],
+  fn: (invoices, targets) => {
+    const asOf = targets.find((r) => r.key === 'as_of').value;
+    return invoices.filter((x) => !x.paid && x.issued <= asOf).map((x) => {
+      const days_unpaid = Math.round((Date.parse(asOf) - Date.parse(x.issued)) / 864e5);
+      return { ...x, days_unpaid, colour: days_unpaid >= 10 ? 'Red' : days_unpaid >= 5 ? 'Amber' : 'None' };
+    }).sort((a, b) => b.days_unpaid - a.days_unpaid);
+  },
+});
+
+dash.calc('invoice_summary', {
+  title: 'Unpaid invoices in total',
+  description: 'How many invoices are unpaid on the as-of date, what they add up to, and how many are 10 days or more.',
+  inputs: ['open_invoices', 'targets'],
+  fn: (open_invoices, targets) => [{ as_of: targets.find((r) => r.key === 'as_of').value, count: open_invoices.length,
+    amount: open_invoices.reduce((s, x) => s + Number(x.amount), 0), red: open_invoices.filter((x) => x.colour === 'Red').length }],
+});
+
+dash.calc('renewals_due', {
+  title: 'Trials ending in the next 30 days',
+  description: 'Trials still running on the as-of date that end within 30 days; yellow from 30 days left, amber from 15, red from 7.',
+  inputs: ['trials', 'targets'],
+  fn: (trials, targets) => {
+    const asOf = targets.find((r) => r.key === 'as_of').value;
+    return trials.filter((x) => x.status === 'In trial').map((x) => {
+      const days_left = Math.round((Date.parse(x.end) - Date.parse(asOf)) / 864e5);
+      return { ...x, days_left, colour: days_left <= 7 ? 'Red' : days_left <= 15 ? 'Amber' : 'Yellow' };
+    }).filter((x) => x.days_left <= 30).sort((a, b) => a.days_left - b.days_left);
+  },
+});
+
+dash.calc('aging_leads', {
+  title: 'Open leads past the days-to-decide target',
+  description: 'Leads not paid and not closed on the as-of date that came in more than the target number of days ago, with the furthest step reached.',
+  inputs: ['leads', 'targets'],
+  fn: (leads, targets) => {
+    const t = Object.fromEntries(targets.map((r) => [r.key, r.value]));
+    const steps = [['architect', 'Architect session'], ['interview', 'Ambition interview'], ['call_attended', 'Discovery call held'], ['call_booked', 'Discovery call booked'], ['qualified', 'Qualified or in nurture'], ['created', 'New lead']];
+    return leads.filter((x) => !x.paid && !x.closed).map((x) => {
+      const [f, stage] = steps.find(([k]) => x[k]);
+      return { lead_id: x.lead_id, path: x.path === 'Ads' ? 'Ads and website form' : 'Workshop', stage, last_step: x[f],
+        days_open: Math.round((Date.parse(t.as_of) - Date.parse(x.created)) / 864e5) };
+    }).filter((x) => x.days_open > t.days_to_decide).sort((a, b) => b.days_open - a.days_open);
+  },
+});
+
+dash.calc('aging_trend', {
+  title: 'Open leads past the target, by week',
+  description: 'At the end of each week (or the as-of date for the current week), leads that had come in but were not yet paid or closed and were older than the days-to-decide target, split into 46–60, 61–90 and over 90 days, for both entry paths and each one.',
+  inputs: ['leads', 'targets'],
+  fn: (leads, targets) => {
+    const t = Object.fromEntries(targets.map((r) => [r.key, r.value]));
+    const DAY = 864e5, iso = (v) => new Date(v).toISOString().slice(0, 10), ms = (d) => Date.parse(d + 'T00:00:00Z');
+    let w = ms(t.first_month + '-01'); w -= ((new Date(w).getUTCDay() + 6) % 7) * DAY;
+    const out = [];
+    for (; w <= ms(t.as_of); w += 7 * DAY) {
+      const end = Math.min(w + 6 * DAY, ms(t.as_of)), endIso = iso(end);
+      ['All', 'Ads', 'Workshop'].forEach((path) => {
+        const r = { week: iso(w), week_end: endIso, path, d46_60: 0, d61_90: 0, d90_plus: 0 };
+        leads.forEach((x) => {
+          if ((path !== 'All' && x.path !== path) || x.created > endIso || (x.paid && x.paid <= endIso) || (x.closed && x.closed <= endIso)) return;
+          const age = (end - ms(x.created)) / DAY;
+          if (age > 90) r.d90_plus++; else if (age > 60) r.d61_90++; else if (age > t.days_to_decide) r.d46_60++;
+        });
+        r.total = r.d46_60 + r.d61_90 + r.d90_plus;
+        out.push(r);
+      });
+    }
+    return out;
+  },
+});
+
+dash.calc('workshop_table', {
+  title: 'Workshops with break-even',
+  description: 'Per workshop: seats sold, seat revenue, workshop ad spend since the previous workshop, ad spend per seat, break-even against ad spend plus venue cost, attendance, and attendees who later converted (paid for the full program, directly or by renewing a trial).',
+  inputs: ['workshops', 'ads_daily', 'leads', 'trials', 'targets'],
+  fn: (workshops, ads_daily, leads, trials, targets) => {
+    const t = Object.fromEntries(targets.map((r) => [r.key, r.value]));
+    const renewed = new Set(trials.filter((x) => x.status === 'Renewed').map((x) => 'L' + x.trial_id.slice(2)));
+    const sorted = [...workshops].sort((a, b) => a.date.localeCompare(b.date));
+    return sorted.map((w, i) => {
+      const from = i ? sorted[i - 1].date : '0000';
+      const ad_spend = ads_daily.filter((x) => x.type === 'Workshop' && x.date > from && x.date <= w.date).reduce((u, x) => u + Number(x.spend), 0);
+      const revenue = w.seats_sold * t.seat_price;
+      return { workshop_id: w.workshop_id, date: w.date, upcoming: w.date > t.as_of, seats_sold: w.seats_sold, revenue, ad_spend,
+        cost_per_seat: w.seats_sold ? Math.round(ad_spend / w.seats_sold) : null,
+        break_even: Math.round((100 * revenue) / (ad_spend + t.venue)) / 100, attended: w.attended,
+        enrolled: leads.filter((x) => x.workshop_id === w.workshop_id && x.paid && (x.plan === 'Full program' || renewed.has(x.lead_id))).length };
+    });
+  },
+});
+
+dash.calc('action_counts', {
+  title: 'Ads per action',
+  description: 'How many ads still running at the end of each period are tagged Scale, Refresh, Drop or Watch, and their spend in the period.',
+  inputs: ['period_ads'],
+  fn: (period_ads) => [...new Set(period_ads.map((x) => x.period))].map((period) => {
+    const a = period_ads.filter((x) => x.period === period);
+    const r = { period };
+    ['Scale', 'Refresh', 'Drop', 'Watch'].forEach((k) => {
+      const b = a.filter((x) => x.action === k);
+      r[k.toLowerCase()] = b.length;
+      r[k.toLowerCase() + '_spend'] = b.reduce((s, x) => s + x.spend, 0);
+    });
+    return r;
+  }),
+});
+
+// ---------- shared helpers ----------
+window.GX = (() => {
+  const rows = (id) => { const d = dash.data(id); return d.status === 'ok' ? d.data : null; };
+  const enc = (v) => String(v).replace(/%/g, '%25').replace(/&/g, '%26').replace(/=/g, '%3D');
+  const where = (obj) => Object.entries(obj).map(([k, v]) => `${k}=${enc(v)}`).join('&');
+  const find = (r, obj) => r.find((x) => Object.entries(obj).every(([k, v]) => String(x[k]) === String(v)));
+  const target = (key) => { const r = rows('targets'); const x = r && r.find((y) => y.key === key); return x ? x.value : null; };
+  // the period the selector points at, as a period_list row
+  const period = () => {
+    const list = rows('period_list');
+    if (!list || !list.length) return null;
+    const asOf = list[0].as_of.slice(0, 7);
+    const months = [...new Set(list.map((x) => x.from))].sort();
+    const i = months.indexOf(asOf);
+    const prm = dash.params();
+    const range = prm.range || 'last_3_months';
+    let a = asOf, b = asOf;
+    if (range === 'last_month') a = b = months[Math.max(0, i - 1)];
+    else if (range === 'last_3_months') a = months[Math.max(0, i - 2)];
+    else if (range === 'qtd') { const m = +asOf.slice(5); a = `${asOf.slice(0, 4)}-${String(m - ((m - 1) % 3)).padStart(2, '0')}`; if (!months.includes(a)) a = months[0]; }
+    else if (range === 'custom') { a = prm.from || months[0]; b = prm.to || asOf; if (a > b) [a, b] = [b, a]; }
+    return list.find((x) => x.from === a && x.to === b) || null;
+  };
+  const pid = () => { const p = period(); return p ? p.period : null; };
+  // the campaign picked on the Campaigns tab, or the one with the most spend in the period
+  const campaign = () => {
+    const r = rows('period_campaigns'), p = pid();
+    if (!r || !p) return null;
+    const list = r.filter((x) => x.period === p);
+    const want = dash.params().campaign;
+    return list.find((x) => x.campaign === want) || [...list].sort((a, b) => b.spend - a.spend)[0] || null;
+  };
+  const lakh = (v) => {
+    if (v == null) return '—';
+    const a = Math.abs(v);
+    if (a >= 1e7) return '₹' + (v / 1e7).toFixed(2) + ' Cr';
+    if (a >= 1e5) return '₹' + (v / 1e5).toFixed(1) + 'L';
+    if (a >= 1e3) return '₹' + (v / 1e3).toFixed(0) + 'k';
+    return '₹' + Math.round(v).toLocaleString('en-IN');
+  };
+  const inr = (v) => (v == null ? '—' : '₹' + Math.round(v).toLocaleString('en-IN'));
+  const signed = (v) => (v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString('en-IN'));
+  const dateFmt = (s) => (s ? d3.utcFormat('%-d %b %Y')(new Date(s + 'T00:00:00Z')) : '—');
+  const dateShort = (s) => (s ? d3.utcFormat('%-d %b')(new Date(s + 'T00:00:00Z')) : '—');
+  const value = (el, id, field, w, show = (v) => String(v)) => {
+    const r = rows(id);
+    if (!r || !w) { el.textContent = '—'; return null; }
+    el.setAttribute('data-where', where(w));
+    const row = find(r, w);
+    el.textContent = row && row[field] != null ? show(row[field], row) : '—';
+    return row;
+  };
+  const tone = (el, v, goodWhenUp = true) => {
+    el.classList.toggle('gx-up', v != null && v !== 0 && (goodWhenUp ? v > 0 : v < 0));
+    el.classList.toggle('gx-down', v != null && v !== 0 && (goodWhenUp ? v < 0 : v > 0));
+  };
+  const pill = (td, text, cls) => { const s = document.createElement('span'); s.className = 'gx-pill gx-' + cls; s.textContent = text; td.replaceChildren(s); };
+  const css = (name, el) => getComputedStyle(el).getPropertyValue(name).trim();
+  // brand series colours, one set for light and one for dark backgrounds (checked for colour-blind separation)
+  const isDark = () => {
+    const tile = document.querySelector('.gx-tile, .gx-card');
+    const c = tile && d3.color(getComputedStyle(tile).backgroundColor);
+    if (c && c.opacity > 0) return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255 < 0.5;
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  };
+  const series = () => (isDark() ? { full: '#c2506a', trial: '#b5851c', ws: '#5b8bcb' } : { full: '#9b2d42', trial: '#d9a21b', ws: '#3b6ea8' });
+  return { rows, where, find, target, period, pid, campaign, lakh, inr, signed, dateFmt, dateShort, value, tone, pill, css, series };
+})();
+</script>
+
+<script>
+// ---------- controls ----------
+(() => {
+  const pages = ['overview', 'revenue', 'funnel', 'campaigns', 'actions'];
+  const show = (name) => {
+    if (!pages.includes(name)) name = 'overview';
+    document.querySelectorAll('[data-page]').forEach((s) => { s.hidden = s.dataset.page !== name; });
+    document.querySelectorAll('.gx-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    dash.setLink(name);
+  };
+  document.querySelectorAll('.gx-tab').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+  show(location.hash.slice(1));
+  document.querySelectorAll('.gx-period').forEach((sel) => sel.addEventListener('change', () => dash.setParams({ range: sel.value })));
+  document.querySelectorAll('.gx-seg').forEach((b) => b.addEventListener('click', () => dash.setParams({ path: b.dataset.path })));
+  // a click on a campaign row opens its performance; a click on an action row opens its campaign
+  document.querySelectorAll('.gx-campaign-table').forEach((t) => t.addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr[data-campaign]');
+    if (tr) dash.setParams({ campaign: tr.dataset.campaign });
+  }));
+  document.querySelectorAll('.gx-action-table').forEach((t) => t.addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr[data-campaign]');
+    if (!tr) return;
+    dash.setParams({ campaign: tr.dataset.campaign });
+    show('campaigns');
+    document.querySelectorAll('#campaign-detail').forEach((d) => d.scrollIntoView({ block: 'start' }));
+  }));
+  dash.onData(() => {
+    const prm = dash.params();
+    document.querySelectorAll('.gx-period').forEach((sel) => { sel.value = prm.range || 'last_3_months'; });
+    document.querySelectorAll('.gx-custom').forEach((l) => { l.hidden = prm.range !== 'custom'; });
+    document.querySelectorAll('.gx-seg').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.path === (prm.path || 'All'))));
+    const s = window.GX.series();
+    document.querySelectorAll('.gx').forEach((root) => { root.style.setProperty('--gx-full', s.full); root.style.setProperty('--gx-trial', s.trial); root.style.setProperty('--gx-ws', s.ws); });
+    const rev = document.querySelector('[data-page="revenue"]');
+    if (rev && !rev.hidden) {
+      const w = window.GX.rows('workshop_table'), p = window.GX.period();
+      const none = !!(w && p) && !w.some((x) => x.date >= p.start && x.date <= p.end.slice(0, 8) + '31');
+      document.querySelectorAll('.gx-ws-empty').forEach((e) => { e.hidden = !none; });
+    }
+  });
+})();
+</script>
+
+<script>
+// ---------- single values ----------
+(() => {
+  const { rows, value, pid, period, campaign, lakh, inr, signed, dateFmt, tone, target } = window.GX;
+  const P = (name, id, field, show, after) => dash.draw(name, (el) => {
+    const row = value(el, id, field, pid() && { period: pid() }, show);
+    if (after) after(el, row ? row[field] : null, row);
+  });
+  const L = (name, field, path, show, after) => dash.draw(name, (el) => {
+    const row = value(el, 'period_leads', field, pid() && { period: pid(), path: typeof path === 'function' ? path() : path }, show);
+    if (after) after(el, row ? row[field] : null);
+  });
+  const T = (name, key, show) => dash.draw(name, (el) => { value(el, 'targets', 'value', { key }, show); });
+
+  P('range-start', 'period_list', 'start', dateFmt); P('range-end', 'period_list', 'end', dateFmt); P('range-days', 'period_list', 'days');
+  dash.draw('as-of', (el) => { const p = period(); el.textContent = p ? dateFmt(p.as_of) : '—'; });
+
+  // overview tiles; the thin meters show progress to target
+  const meter = (name, field, of) => dash.draw(name, (el) => {
+    const r = rows('period_revenue'), p = pid();
+    const row = r && p && r.find((x) => x.period === p);
+    if (row) el.setAttribute('data-where', `period=${p}`);
+    el.style.width = row ? Math.min(100, Math.round((100 * row[field]) / (of ? row[of] : 100))) + '%' : '0';
+  });
+  meter('m-rev', 'revenue_pct'); meter('m-full', 'full_conv', 'full_target'); meter('m-trial', 'trial_n', 'trial_target'); meter('m-seats', 'seats', 'seats_target');
+  P('o-rev', 'period_revenue', 'revenue', lakh);
+  P('o-rev-pct', 'period_revenue', 'revenue_pct', String, (el, v) => tone(el, v == null ? null : v >= 100 ? 1 : -1));
+  P('o-rev-target', 'period_revenue', 'revenue_target', lakh);
+  P('o-rev-ch', 'period_revenue', 'revenue_change_pct', signed, (el, v) => tone(el, v));
+  P('o-full', 'period_revenue', 'full_conv'); P('o-full-t', 'period_revenue', 'full_target'); P('o-full-ren', 'period_revenue', 'renewals_n');
+  P('o-full-ch', 'period_revenue', 'full_conv_change', signed, (el, v) => tone(el, v));
+  P('o-trial', 'period_revenue', 'trial_n'); P('o-trial-t', 'period_revenue', 'trial_target'); P('o-trial-ch', 'period_revenue', 'trial_change', signed, (el, v) => tone(el, v));
+  P('o-seats', 'period_revenue', 'seats'); P('o-seats-t', 'period_revenue', 'seats_target'); P('o-seats-ch', 'period_revenue', 'seats_change', signed, (el, v) => tone(el, v));
+  L('o-wsp', 'conversion_pct', 'Workshop', (v) => v.toFixed(1)); L('o-wsp-n', 'converted', 'Workshop'); L('o-wsp-d', 'leads', 'Workshop');
+  L('o-cpql', 'cpql', 'All', inr, (el, v) => tone(el, v == null ? null : v <= target('cpql') ? 1 : -1));
+  L('o-cpql-ch', 'cpql_change', 'All', (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + inr(Math.abs(v)), (el, v) => tone(el, v, false));
+  T('o-cpql-cap', 'cpql', inr);
+  L('o-days', 'days_to_decide', 'All', String, (el, v) => tone(el, v == null ? null : v <= target('days_to_decide') ? 1 : -1));
+  T('o-days-t', 'days_to_decide');
+  const I = (name, field, show) => dash.draw(name, (el) => { value(el, 'invoice_summary', field, { as_of: (rows('invoice_summary') || [{}])[0].as_of }, show); });
+  I('o-inv-n', 'count'); I('o-inv-amt', 'amount', lakh); I('o-inv-red', 'red');
+
+  // revenue tiles
+  P('r-full', 'period_revenue', 'full_rev', lakh); P('r-trial', 'period_revenue', 'trial_rev', lakh); P('r-trial-n', 'period_revenue', 'trial_n');
+  P('r-ws', 'period_revenue', 'workshop_rev', lakh); P('r-share', 'period_revenue', 'workshop_share');
+  P('r-renew', 'period_revenue', 'renewal_rate'); P('r-renew-n', 'period_revenue', 'renewed'); P('r-ended-n', 'period_revenue', 'trials_ended');
+  T('venue', 'venue', lakh);
+
+  // funnel
+  const path = () => dash.params().path || 'All';
+  L('f-showup', 'show_up_pct', path); L('f-days', 'days_to_decide', path);
+  T('aging-days', 'days_to_decide');
+
+  // campaign detail
+  T('c-cpql', 'cpql', (v) => inr(v) + ' per qualified lead'); T('c-seat', 'cost_per_seat', (v) => inr(v) + ' per seat');
+  const C = (name, field, show, after) => dash.draw(name, (el) => {
+    const c = campaign();
+    value(el, 'period_campaigns', field, c && { period: c.period, campaign: c.campaign }, show);
+    if (after) after(el, c);
+  });
+  C('d-name', 'campaign'); C('d-spend', 'spend', inr); C('d-ctr', 'ctr', (v) => v.toFixed(2)); C('d-freq', 'frequency', (v) => v.toFixed(1));
+  C('d-results', 'results', (v, r) => `${v} ${r.type === 'Program' ? 'qualified leads' : 'seats sold'}`);
+  C('d-cost', 'cost', inr, (el, c) => tone(el, c && c.cost != null ? (c.cost <= c.ceiling ? 1 : -1) : null));
+
+  // actions
+  T('a-freq', 'frequency');
+  ['scale', 'refresh', 'drop', 'watch'].forEach((k) => { P('a-' + k, 'action_counts', k); P(`a-${k}-s`, 'action_counts', k + '_spend', inr); });
+
+  // custom range month pickers
+  const monthSel = (name, param, fallback) => dash.draw(name, (sel) => {
+    const list = rows('period_list');
+    const months = list ? [...new Set(list.map((x) => x.from))].sort() : [];
+    sel.replaceChildren(...months.map((m) => new Option(d3.utcFormat('%b %Y')(new Date(m + '-01T00:00:00Z')), m)));
+    sel.value = dash.params()[param] || fallback(months);
+    sel.onchange = () => dash.setParams({ [param]: sel.value });
+  });
+  monthSel('from-month', 'from', (m) => m[0]);
+  monthSel('to-month', 'to', (m) => m[m.length - 1]);
+})();
+</script>
+
+<script>
+// ---------- tables ----------
+(() => {
+  const { rows, pid, campaign, lakh, inr, dateFmt, pill } = window.GX;
+  const td = (tr, text, cls) => { const c = tr.insertCell(); c.textContent = text; if (cls) c.className = cls; return c; };
+  const keyOf = (...parts) => parts.map((v) => String(v).replace(/%/g, '%25').replace(/,/g, '%2C')).join(',');
+  const actCls = { Scale: 'g', Refresh: 'a', Drop: 'r', Watch: 'n', Ended: 'n' };
+
+  dash.draw('invoice-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('open_invoices'); if (!r) return;
+    r.forEach((x) => {
+      const tr = tb.insertRow();
+      td(tr, x.invoice_id); td(tr, x.plan); td(tr, inr(x.amount), 'n');
+      pill(td(tr, '', 'n'), String(x.days_unpaid), x.colour === 'Red' ? 'r' : x.colour === 'Amber' ? 'a' : 'n');
+    });
+  });
+
+  dash.draw('renewal-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('renewals_due'); if (!r) return;
+    r.forEach((x) => {
+      const tr = tb.insertRow();
+      td(tr, x.trial_id); td(tr, x.family); td(tr, dateFmt(x.end));
+      pill(td(tr, '', 'n'), String(x.days_left), x.colour === 'Red' ? 'r' : x.colour === 'Amber' ? 'a' : 'y');
+    });
+  });
+
+  dash.draw('aging-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('aging_leads'); if (!r) return;
+    const path = dash.params().path || 'All';
+    r.filter((x) => path === 'All' || (path === 'Ads') === (x.path !== 'Workshop')).forEach((x) => {
+      const tr = tb.insertRow();
+      td(tr, x.lead_id); td(tr, x.path); td(tr, x.stage); td(tr, dateFmt(x.last_step));
+      pill(td(tr, '', 'n'), String(x.days_open), x.days_open > 60 ? 'r' : 'a');
+    });
+  });
+
+  dash.draw('campaign-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('period_campaigns'), p = pid(), sel = campaign(); if (!r || !p) return;
+    r.filter((x) => x.period === p).sort((a, b) => b.spend - a.spend).forEach((x) => {
+      const tr = tb.insertRow(); tr.dataset.key = keyOf(x.period, x.campaign); tr.dataset.campaign = x.campaign;
+      tr.classList.toggle('gx-sel', !!sel && sel.campaign === x.campaign);
+      td(tr, x.campaign); td(tr, lakh(x.spend), 'n'); td(tr, x.ctr.toFixed(2), 'n');
+      pill(td(tr, '', 'n'), x.frequency.toFixed(1), x.frequency >= 3 ? 'a' : 'n');
+      td(tr, String(x.results), 'n');
+      const c = td(tr, '', 'n');
+      if (x.cost == null) c.textContent = 'No results'; else pill(c, inr(x.cost), x.cost <= x.ceiling ? 'g' : 'r');
+    });
+  });
+
+  dash.draw('d-ad-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('period_ads'), c = campaign(); if (!r || !c) return;
+    r.filter((x) => x.period === c.period && x.campaign === c.campaign).sort((a, b) => b.spend - a.spend).forEach((x) => {
+      const tr = tb.insertRow(); tr.dataset.key = keyOf(x.period, x.ad);
+      pill(td(tr, ''), x.action, actCls[x.action]);
+      td(tr, x.ad); td(tr, inr(x.spend), 'n'); td(tr, x.ctr.toFixed(2), 'n'); td(tr, x.frequency.toFixed(1), 'n');
+      const cc = td(tr, '', 'n');
+      if (x.cost == null) cc.textContent = 'No results'; else pill(cc, inr(x.cost), x.cost <= x.ceiling ? 'g' : 'r');
+      td(tr, x.reason);
+    });
+  });
+
+  dash.draw('action-rows', (tb) => {
+    tb.replaceChildren();
+    const r = rows('period_ads'), p = pid(); if (!r || !p) return;
+    r.filter((x) => x.period === p && x.action !== 'Ended').sort((a, b) => b.spend - a.spend).forEach((x) => {
+      const tr = tb.insertRow(); tr.dataset.key = keyOf(x.period, x.ad); tr.dataset.campaign = x.campaign;
+      pill(td(tr, ''), x.action, actCls[x.action]);
+      td(tr, x.ad); td(tr, x.campaign); td(tr, inr(x.spend), 'n'); td(tr, x.reason);
+    });
+  });
+})();
+</script>
+
+<script>
+// ---------- charts ----------
+(() => {
+  const { rows, pid, period, campaign, lakh, inr, css, series, target, dateShort } = window.GX;
+  const tipBox = (el) => { const t = document.createElement('div'); t.className = 'gx-tip'; t.hidden = true; el.appendChild(t); return t; };
+  const tipLine = (color, text) => {
+    const d = document.createElement('div');
+    if (color) { const s = document.createElement('span'); s.className = 'gx-sw'; s.style.background = color; d.appendChild(s); }
+    d.appendChild(document.createTextNode(text)); return d;
+  };
+  const tipHead = (text) => { const h = document.createElement('div'); h.className = 'gx-tip-h'; h.textContent = text; return h; };
+  const place = (el, tip, px, py) => {
+    const w = el.clientWidth;
+    tip.style.left = Math.min(Math.max(0, px + 12), Math.max(0, w - tip.offsetWidth)) + 'px';
+    tip.style.top = Math.max(0, py) + 'px';
+  };
+  const axisText = (g) => { g.attr('font-size', null).attr('font-family', null); g.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)'); };
+  const start = (el, ok) => { el.replaceChildren(); el.classList.toggle('dash-skeleton', !ok); return ok; };
+  const monthLabel = (m) => d3.utcFormat('%b %y')(new Date(m + '-01T00:00:00Z'));
+  const axisLakh = (v) => (v === 0 ? '₹0' : '₹' + String(Math.round(v / 1e4) / 10) + 'L');
+  const monthLong = (m) => d3.utcFormat('%B %Y')(new Date(m + '-01T00:00:00Z'));
+
+  // stacked bars by month for the selected months, with a dashed target tick per month
+  const monthBars = (el, months, keys, targetOf, fmt, label, H = 200, axisFmt = fmt) => {
+    const W = Math.max(260, el.clientWidth), bottom = 22;
+    const y = d3.scaleLinear([0, d3.max(months, (d) => Math.max(d3.sum(keys, (k) => d[k.key]), targetOf(d))) * 1.12 || 1], [H - bottom, 6]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', label);
+    const gy = svg.append('g').call(d3.axisLeft(y).ticks(4).tickSize(0).tickFormat(axisFmt));
+    gy.select('.domain').remove(); axisText(gy);
+    let left = 0; gy.selectAll('text').each(function () { left = Math.max(left, this.getComputedTextLength()); });
+    left += 10; gy.attr('transform', `translate(${left - 4},0)`);
+    const x = d3.scaleBand(months.map((d) => d.month), [left, W - 2]).paddingInner(0.3).paddingOuter(0.15);
+    const bw = Math.min(56, x.bandwidth()), off = (x.bandwidth() - bw) / 2;
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(4)).join('line').attr('x1', left).attr('x2', W - 2).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)');
+    const gx = svg.append('g').attr('transform', `translate(0,${H - bottom})`).call(d3.axisBottom(x).tickSize(0).tickPadding(7).tickFormat(monthLabel));
+    gx.select('.domain').attr('stroke', 'var(--cds-chart-axis)'); axisText(gx);
+    const stack = d3.stack().keys(keys.map((k) => k.key))(months);
+    stack.forEach((layer, i) => {
+      svg.append('g').selectAll('rect').data(layer).join('rect')
+        .attr('x', (d) => x(d.data.month) + off).attr('width', bw)
+        .attr('y', (d) => y(d[1]) + (d[1] > d[0] && i ? 1 : 0)).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1]) - (d[1] > d[0] && i ? 1 : 0)))
+        .attr('fill', keys[i].color).attr('rx', i === stack.length - 1 ? 3 : 0);
+    });
+    svg.append('g').selectAll('line').data(months).join('line')
+      .attr('x1', (d) => x(d.month) + off - 5).attr('x2', (d) => x(d.month) + off + bw + 5).attr('y1', (d) => y(targetOf(d))).attr('y2', (d) => y(targetOf(d)))
+      .attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 2).attr('stroke-dasharray', '4 3');
+    const tip = tipBox(el);
+    svg.append('g').selectAll('rect').data(months).join('rect').attr('x', (d) => x(d.month)).attr('width', x.bandwidth()).attr('y', 0).attr('height', H - bottom).attr('fill', 'transparent')
+      .on('pointermove', (ev, d) => {
+        const total = d3.sum(keys, (k) => d[k.key]);
+        tip.replaceChildren(tipHead(monthLong(d.month)), ...keys.map((k) => tipLine(keys.length > 1 ? k.color : null, `${k.name}: ${fmt(d[k.key])}${k.extra ? k.extra(d) : ''}`)),
+          tipLine(null, `${keys.length > 1 ? 'Total ' + fmt(total) + ' · ' : ''}target ${fmt(targetOf(d))}`));
+        tip.hidden = false;
+        const box = el.getBoundingClientRect();
+        place(el, tip, ((x(d.month) + x.bandwidth()) / W) * box.width, 2);
+      })
+      .on('pointerleave', () => { tip.hidden = true; });
+  };
+  const selMonths = () => { const r = rows('monthly'), p = period(); return r && p ? r.filter((d) => d.month >= p.from && d.month <= p.to) : null; };
+
+  dash.draw('month-revenue', (el) => {
+    const m = selMonths(); if (!start(el, !!m)) return;
+    const s = series();
+    monthBars(el, m, [{ key: 'full', name: 'Full program', color: s.full, extra: (d) => (d.renewal ? ` (incl. ${lakh(d.renewal)} renewals)` : '') }, { key: 'trial', name: 'Trial', color: s.trial }, { key: 'workshop', name: 'Workshops', color: s.ws }],
+      (d) => d.target, lakh, 'Revenue by stream by month, with the monthly target', 200, axisLakh);
+  });
+  dash.draw('month-onboarded', (el) => {
+    const m = selMonths(); if (!start(el, !!m)) return;
+    const s = series();
+    monthBars(el, m, [{ key: 'full_n', name: 'Full program', color: s.full }, { key: 'trial_n', name: 'Trial', color: s.trial }],
+      (d) => d.signups_target, (v) => String(Math.round(v * 10) / 10), 'Students onboarded by month, full program and trial, with the target');
+  });
+  const streamMonths = (name, key, tkey, color) => dash.draw(name, (el) => {
+    const m = selMonths(); if (!start(el, !!m)) return;
+    monthBars(el, m, [{ key, name: 'Collected', color: series()[color] }], (d) => d[tkey], lakh, 'Revenue by month against target', 150, axisLakh);
+  });
+  streamMonths('m-full-rev', 'full', 'full_target', 'full');
+  streamMonths('m-trial-rev', 'trial', 'trial_target', 'trial');
+  streamMonths('m-ws-rev', 'workshop', 'workshop_target', 'ws');
+
+  // horizontal bars, labels on the left; rows: {label, value, color, prev?, ref?, right?, tip, onClick?}
+  const hbars = (el, data, opt = {}) => {
+    const rowH = opt.rowH || 26, W = Math.max(260, el.clientWidth), H = data.length * rowH + (opt.axis ? 20 : 2);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', opt.label || '');
+    const labels = svg.append('g');
+    data.forEach((d, i) => labels.append('text').attr('x', 0).attr('y', i * rowH + rowH / 2 + 4).attr('fill', 'var(--color-fg)')
+      .attr('font-weight', d.bold ? 600 : null).style('font-size', 'var(--cds-font-size-caption)').text(d.label));
+    let left = 0; labels.selectAll('text').each(function () { left = Math.max(left, this.getComputedTextLength()); });
+    left = Math.min(left + 12, W * 0.42);
+    const right = W - (opt.rightW || 0) - (opt.valueLabel ? 64 : 4);
+    const max = opt.max || d3.max(data, (d) => Math.max(d.value, d.ref || 0, d.prev || 0)) * 1.05 || 1;
+    const x = d3.scaleLinear([0, max], [left, Math.max(left + 40, right)]);
+    if (opt.axis) {
+      const gx = svg.append('g').attr('transform', `translate(0,${H - 18})`).call(d3.axisBottom(x).ticks(4).tickSize(0).tickPadding(4).tickFormat(opt.fmt));
+      gx.select('.domain').remove(); axisText(gx);
+      svg.insert('g', ':first-child').selectAll('line').data(x.ticks(4)).join('line').attr('x1', x).attr('x2', x).attr('y1', 0).attr('y2', H - 20).attr('stroke', 'var(--cds-chart-grid)');
+    }
+    const muted = css('--cds-chart-muted', el) || 'gray';
+    const tip = tipBox(el);
+    data.forEach((d, i) => {
+      const y0 = i * rowH + (rowH - 16) / 2 - (d.prev != null ? 2 : 0);
+      svg.append('rect').attr('x', left).attr('y', y0).attr('height', 14).attr('width', Math.max(1, x(d.value) - left)).attr('rx', 3).attr('fill', d.color);
+      if (d.prev != null) svg.append('rect').attr('x', left).attr('y', y0 + 16).attr('height', 3).attr('width', Math.max(1, x(d.prev) - left)).attr('rx', 1.5).attr('fill', muted);
+      if (d.ref != null) svg.append('line').attr('x1', x(d.ref)).attr('x2', x(d.ref)).attr('y1', y0 - 3).attr('y2', y0 + 17).attr('stroke', 'var(--color-fg)').attr('stroke-width', 2);
+      if (opt.valueLabel) svg.append('text').attr('x', Math.max(x(d.value), d.ref != null ? x(d.ref) : 0) + 6).attr('y', y0 + 11).attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').style('font-variant-numeric', 'tabular-nums').text(opt.valueLabel(d));
+      if (d.right) svg.append('text').attr('x', W).attr('text-anchor', 'end').attr('y', y0 + 11).attr('fill', d.rightColor || 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').style('font-variant-numeric', 'tabular-nums').text(d.right);
+      svg.append('rect').attr('x', 0).attr('y', i * rowH).attr('width', W).attr('height', rowH).attr('fill', 'transparent').style('cursor', d.onClick ? 'pointer' : null)
+        .on('click', d.onClick || null)
+        .on('pointermove', (ev) => {
+          if (!d.tip) return;
+          tip.replaceChildren(tipHead(d.label), ...d.tip.map((t) => tipLine(null, t))); tip.hidden = false;
+          const box = el.getBoundingClientRect();
+          place(el, tip, ev.clientX - box.left, ((i + 1) * rowH / H) * box.height);
+        })
+        .on('pointerleave', () => { tip.hidden = true; });
+    });
+  };
+
+  // each stream against its target
+  dash.draw('streams', (el) => {
+    const r = rows('stream_revenue'), p = pid(); if (!start(el, !!(r && p))) return;
+    const s = series(), col = { 'Full program': s.full, Trial: s.trial, Workshops: s.ws };
+    const narrow = el.clientWidth < 560;
+    const data = r.filter((x) => x.period === p).map((x) => ({ label: x.stream, value: x.revenue, ref: x.target, color: col[x.stream],
+      right: narrow ? `${x.pct_of_target}%` : `${x.pct_of_target}% of ${lakh(x.target)} target · ${x.share}% of revenue`, rightColor: x.pct_of_target >= 100 ? 'var(--color-ok)' : null,
+      tip: [`Collected ${lakh(x.revenue)}`, `Target ${lakh(x.target)} (${x.pct_of_target}%)`, `Share of all revenue ${x.share}%`] }));
+    hbars(el, data, { rowH: 26, rightW: narrow ? 44 : 250, valueLabel: (d) => lakh(d.value), label: 'Revenue per stream against target' });
+  });
+
+  // workshop break-even, one bar per workshop in the period
+  dash.draw('breakeven', (el) => {
+    const r = rows('workshop_table'), p = period(); if (!start(el, !!(r && p))) return;
+    const list = r.filter((x) => x.date >= p.start && x.date <= p.end.slice(0, 8) + '31');
+    if (!list.length) return;
+    const W = Math.max(240, el.clientWidth), H = 150, bottom = 22;
+    const y = d3.scaleLinear([0, Math.max(1.2, d3.max(list, (d) => d.break_even) * 1.1)], [H - bottom, 6]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Break-even per workshop');
+    const gy = svg.append('g').call(d3.axisLeft(y).ticks(3).tickSize(0).tickFormat(d3.format('.1f'))); gy.select('.domain').remove(); axisText(gy);
+    let left = 0; gy.selectAll('text').each(function () { left = Math.max(left, this.getComputedTextLength()); }); left += 10; gy.attr('transform', `translate(${left - 4},0)`);
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(3)).join('line').attr('x1', left).attr('x2', W - 2).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)');
+    const x = d3.scaleBand(list.map((d) => d.workshop_id), [left, W - 2]).paddingInner(0.35).paddingOuter(0.2);
+    const bw = Math.min(40, x.bandwidth()), off = (x.bandwidth() - bw) / 2;
+    const gx = svg.append('g').attr('transform', `translate(0,${H - bottom})`).call(d3.axisBottom(x).tickSize(0).tickPadding(7).tickFormat((id) => dateShort(list.find((d) => d.workshop_id === id).date)));
+    gx.select('.domain').attr('stroke', 'var(--cds-chart-axis)'); axisText(gx);
+    if (list.length > 4) gx.selectAll('text').attr('visibility', (d, i) => (i % 2 ? 'hidden' : null));
+    const muted = css('--cds-chart-muted', el) || 'gray';
+    svg.append('g').selectAll('rect').data(list).join('rect').attr('x', (d) => x(d.workshop_id) + off).attr('width', bw)
+      .attr('y', (d) => y(d.break_even)).attr('height', (d) => y(0) - y(d.break_even)).attr('rx', 3)
+      .attr('fill', (d) => (d.upcoming ? muted : series().ws));
+    svg.append('line').attr('x1', left).attr('x2', W - 2).attr('y1', y(1)).attr('y2', y(1)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 4');
+    const tip = tipBox(el);
+    svg.append('g').selectAll('rect').data(list).join('rect').attr('x', (d) => x(d.workshop_id)).attr('width', x.bandwidth()).attr('y', 0).attr('height', H - bottom).attr('fill', 'transparent')
+      .on('pointermove', (ev, d) => {
+        tip.replaceChildren(tipHead(`${dateShort(d.date)}${d.upcoming ? ' (still selling)' : ''}`), tipLine(null, `Break-even ${d.break_even.toFixed(2)}`),
+          tipLine(null, `${d.seats_sold} seats · ${lakh(d.revenue)}`), tipLine(null, `Ad spend ${inr(d.ad_spend)} (${inr(d.cost_per_seat)} a seat)`),
+          ...(d.upcoming ? [] : [tipLine(null, `${d.attended} attended · ${d.enrolled} converted later`)]));
+        tip.hidden = false;
+        const box = el.getBoundingClientRect();
+        place(el, tip, ((x(d.workshop_id) + x.bandwidth()) / W) * box.width, 2);
+      })
+      .on('pointerleave', () => { tip.hidden = true; });
+  });
+
+  // funnel: one bar per step from the same left edge, thin bar for the period before
+  const STEPS = {
+    All: [['leads', 'Came in'], ['qualified', 'Qualified or in nurture'], ['interview', 'Ambition interview'], ['architect', 'Architect session (Leadership)'], ['paid', 'Paid (trial or full)'], ['converted', 'Converted: full term paid']],
+    Ads: [['leads', 'Form lead'], ['qualified', 'Qualified'], ['booked', 'Discovery call booked'], ['attended', 'Discovery call held'], ['interview', 'Ambition interview'], ['architect', 'Architect session (Leadership)'], ['paid', 'Paid (trial or full)'], ['converted', 'Converted: full term paid']],
+    Workshop: [['leads', 'Attended workshop'], ['qualified', 'In nurture'], ['interview', 'Ambition interview'], ['architect', 'Architect session (Leadership)'], ['paid', 'Paid (trial or full)'], ['converted', 'Converted: full term paid']],
+  };
+  const pathRow = () => { const r = rows('period_leads'), p = pid(); return r && p ? r.find((x) => x.period === p && x.path === (dash.params().path || 'All')) : null; };
+  dash.draw('funnel', (el) => {
+    const row = pathRow(); if (!start(el, !!row)) return;
+    const steps = STEPS[dash.params().path || 'All'];
+    const losses = steps.map(([k], i) => (i && row[steps[i - 1][0]] && row[k] <= row[steps[i - 1][0]] ? 1 - row[k] / row[steps[i - 1][0]] : null));
+    const worst = d3.maxIndex(losses, (v) => (v == null ? -1 : v));
+    const crit = css('--cds-chart-status-critical', el) || 'red';
+    hbars(el, steps.map(([k, n], i) => ({ label: n, value: row[k], prev: row[k + '_prev'], color: series().full,
+      right: losses[i] == null ? '' : '−' + Math.round(losses[i] * 100) + '%', rightColor: i === worst ? crit : null,
+      tip: [`This period: ${row[k].toLocaleString('en-IN')}`, ...(row[k + '_prev'] != null ? [`Period before: ${row[k + '_prev'].toLocaleString('en-IN')}`] : []),
+        ...(losses[i] != null ? [`Lost from the step before: ${Math.round(losses[i] * 100)}%`] : []),
+        ...(k === 'paid' ? [`Paid for a trial: ${row.paid_trial} (${row.in_trial} still in the Trial state)`, `Paid the full program directly: ${row.direct_full}`] : []),
+        ...(k === 'converted' ? [`Paid the full program directly: ${row.direct_full}`, `Renewed from a trial: ${row.converted - row.direct_full}`] : [])] })),
+      { rowH: 34, rightW: 44, valueLabel: (d) => d.value.toLocaleString('en-IN'), label: 'Funnel by step' });
+  });
+
+  dash.draw('outcomes', (el) => {
+    const row = pathRow(); if (!start(el, !!row)) return;
+    const s = series(), crit = css('--cds-chart-status-critical', el) || 'red', muted = css('--cds-chart-muted', el) || 'gray';
+    const total = row.passed + row.rejected + row.dropped;
+    hbars(el, [['Passed', row.passed, s.ws], ['Rejected by Alcovia', row.rejected, muted], ['Dropped by family', row.dropped, crit]].map(([label, value, color]) => ({
+      label, value, color, tip: [`${value} of ${total} interviews (${total ? Math.round((100 * value) / total) : 0}%)`] })),
+      { valueLabel: (d) => `${d.value} · ${total ? Math.round((100 * d.value) / total) : 0}%`, label: 'Ambition interview outcomes' });
+  });
+
+  dash.draw('sources', (el) => {
+    const row = pathRow(); if (!start(el, !!row)) return;
+    const s = series();
+    hbars(el, [['Meta ads', row.from_ads, s.full], ['Organic (form, no ad)', row.organic, s.trial], ['Workshops', row.workshop_leads, s.ws]].map(([label, value, color]) => ({
+      label, value, color, tip: [`${value} families (${row.leads ? Math.round((100 * value) / row.leads) : 0}% of all)`] })),
+      { valueLabel: (d) => d.value.toLocaleString('en-IN'), label: 'Where families came from' });
+  });
+
+  // click rate by ad; a click opens the ad's campaign, whose ads are in bold
+  dash.draw('ctr', (el) => {
+    const r = rows('period_ads'), p = pid(); if (!start(el, !!(r && p))) return;
+    const s = series(), sel = campaign();
+    const a = r.filter((x) => x.period === p).sort((m, n) => n.ctr - m.ctr);
+    hbars(el, a.map((d) => ({ label: d.ad, value: d.ctr, color: d.type === 'Program' ? s.full : s.ws, bold: !!sel && d.campaign === sel.campaign,
+      tip: [d.campaign, `Click rate ${d.ctr.toFixed(2)}%`, `Spend ${inr(d.spend)}`, 'Click to open its campaign'],
+      onClick: () => dash.setParams({ campaign: d.campaign }) })),
+      { rowH: 22, axis: true, fmt: (v) => v + '%', valueLabel: (d) => d.value.toFixed(2) + '%', label: 'Click rate by ad' });
+  });
+
+  // campaign detail, by week inside the period
+  const weeks = () => {
+    const r = rows('campaign_weekly'), c = campaign(), p = period();
+    if (!r || !c || !p) return null;
+    const first = d3.utcFormat('%Y-%m-%d')(d3.utcMonday.floor(new Date(p.start + 'T00:00:00Z')));
+    return { c, list: r.filter((x) => x.campaign === c.campaign && x.week >= first && x.week <= p.end) };
+  };
+  const weekChart = (el, list, field, opt) => {
+    const W = Math.max(220, el.clientWidth), H = 150, bottom = 22;
+    const vals = list.map((d) => d[field]).filter((v) => v != null);
+    const y = d3.scaleLinear([0, Math.max(d3.max(vals) || 0, opt.ref || 0) * 1.15 || 1], [H - bottom, 6]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', opt.label);
+    const gy = svg.append('g').call(d3.axisLeft(y).ticks(3).tickSize(0).tickFormat(opt.fmt)); gy.select('.domain').remove(); axisText(gy);
+    let left = 0; gy.selectAll('text').each(function () { left = Math.max(left, this.getComputedTextLength()); }); left += 10; gy.attr('transform', `translate(${left - 4},0)`);
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(3)).join('line').attr('x1', left).attr('x2', W - 2).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)');
+    const x = d3.scaleBand(list.map((d) => d.week), [left, W - 2]).paddingInner(0.3).paddingOuter(0.1);
+    const gx = svg.append('g').attr('transform', `translate(0,${H - bottom})`).call(d3.axisBottom(x).tickSize(0).tickPadding(7).tickFormat(dateShort));
+    gx.select('.domain').attr('stroke', 'var(--cds-chart-axis)'); axisText(gx);
+    const every = Math.ceil(list.length / Math.max(2, Math.floor((W - left) / 56)));
+    gx.selectAll('text').attr('visibility', (d, i) => (i % every ? 'hidden' : null));
+    const cx = (d) => x(d.week) + x.bandwidth() / 2;
+    if (opt.bars) {
+      const bw = Math.min(28, x.bandwidth());
+      svg.append('g').selectAll('rect').data(list).join('rect').attr('x', (d) => cx(d) - bw / 2).attr('width', bw)
+        .attr('y', (d) => y(d[field] || 0)).attr('height', (d) => y(0) - y(d[field] || 0)).attr('rx', 2).attr('fill', opt.color);
+    } else {
+      svg.append('path').datum(list).attr('fill', 'none').attr('stroke', opt.color).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+        .attr('d', d3.line().defined((d) => d[field] != null).x(cx).y((d) => y(d[field])));
+      svg.append('g').selectAll('circle').data(list.filter((d) => d[field] != null)).join('circle').attr('cx', cx).attr('cy', (d) => y(d[field])).attr('r', 2.5).attr('fill', opt.color);
+    }
+    if (opt.ref != null) svg.append('line').attr('x1', left).attr('x2', W - 2).attr('y1', y(opt.ref)).attr('y2', y(opt.ref)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 4');
+    const tip = tipBox(el);
+    svg.append('g').selectAll('rect').data(list).join('rect').attr('x', (d) => x(d.week)).attr('width', x.step()).attr('y', 0).attr('height', H - bottom).attr('fill', 'transparent')
+      .on('pointermove', (ev, d) => {
+        tip.replaceChildren(tipHead('Week of ' + dateShort(d.week)), tipLine(null, `Spend ${inr(d.spend)}`), tipLine(null, `Results ${d.results}`),
+          tipLine(null, `Cost per result ${d.cost == null ? 'no results' : inr(d.cost)}`), tipLine(null, `Frequency ${d.frequency.toFixed(1)}`));
+        tip.hidden = false;
+        const box = el.getBoundingClientRect();
+        place(el, tip, (cx(d) / W) * box.width, 2);
+      })
+      .on('pointerleave', () => { tip.hidden = true; });
+  };
+  const detail = (name, field, opt) => dash.draw(name, (el) => {
+    const w = weeks(); if (!start(el, !!w)) return;
+    if (!w.list.length) return;
+    const color = w.c.type === 'Program' ? series().full : series().ws;
+    weekChart(el, w.list, field, { color, ...opt(w.c) });
+  });
+  detail('d-week-results', 'results', () => ({ bars: true, fmt: d3.format('d'), label: 'Results per week' }));
+  detail('d-week-cost', 'cost', (c) => ({ ref: c.ceiling, fmt: (v) => lakh(v), label: 'Cost per result per week, with the ceiling' }));
+  detail('d-week-freq', 'frequency', () => ({ ref: target('frequency'), fmt: d3.format('.1f'), label: 'Highest frequency among the campaign’s ads, by week' }));
+
+  // open leads past the target, by week and age band
+  dash.draw('aging-trend', (el) => {
+    const r = rows('aging_trend'), p = period(); if (!start(el, !!(r && p))) return;
+    const path = dash.params().path || 'All';
+    const list = r.filter((x) => x.path === path && x.week_end >= p.start && x.week <= p.end);
+    if (!list.length) return;
+    const bands = [['d46_60', '46–60 days', 'var(--color-warn)'], ['d61_90', '61–90 days', 'color-mix(in srgb, var(--color-warn) 50%, var(--cds-chart-status-critical))'], ['d90_plus', 'Over 90 days', 'var(--cds-chart-status-critical)']];
+    const W = Math.max(240, el.clientWidth), H = 150, bottom = 22;
+    const y = d3.scaleLinear([0, Math.max(4, d3.max(list, (d) => d.total) * 1.15)], [H - bottom, 6]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Open leads past the target, by week and age');
+    const gy = svg.append('g').call(d3.axisLeft(y).ticks(3).tickSize(0).tickFormat(d3.format('d'))); gy.select('.domain').remove(); axisText(gy);
+    let left = 0; gy.selectAll('text').each(function () { left = Math.max(left, this.getComputedTextLength()); }); left += 10; gy.attr('transform', `translate(${left - 4},0)`);
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(3)).join('line').attr('x1', left).attr('x2', W - 2).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)');
+    const x = d3.scaleBand(list.map((d) => d.week), [left, W - 2]).paddingInner(0.25).paddingOuter(0.1);
+    const gx = svg.append('g').attr('transform', `translate(0,${H - bottom})`).call(d3.axisBottom(x).tickSize(0).tickPadding(7).tickFormat(dateShort));
+    gx.select('.domain').attr('stroke', 'var(--cds-chart-axis)'); axisText(gx);
+    const every = Math.ceil(list.length / Math.max(2, Math.floor((W - left) / 56)));
+    gx.selectAll('text').attr('visibility', (d, i) => (i % every ? 'hidden' : null));
+    const bw = Math.min(24, x.bandwidth()), off = (x.bandwidth() - bw) / 2;
+    d3.stack().keys(bands.map((b) => b[0]))(list).forEach((layer, i) => {
+      svg.append('g').selectAll('rect').data(layer).join('rect').attr('x', (d) => x(d.data.week) + off).attr('width', bw)
+        .attr('y', (d) => y(d[1]) + (i && d[1] > d[0] ? 1 : 0)).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1]) - (i && d[1] > d[0] ? 1 : 0)))
+        .attr('rx', i === 2 ? 2 : 0).style('fill', bands[i][2]);
+    });
+    const tip = tipBox(el);
+    svg.append('g').selectAll('rect').data(list).join('rect').attr('x', (d) => x(d.week)).attr('width', x.step()).attr('y', 0).attr('height', H - bottom).attr('fill', 'transparent')
+      .on('pointermove', (ev, d) => {
+        tip.replaceChildren(tipHead('Week ending ' + dateShort(d.week_end)), ...bands.map(([k, n, c]) => tipLine(c, `${n}: ${d[k]}`)), tipLine(null, `Total ${d.total}`));
+        tip.hidden = false;
+        const box = el.getBoundingClientRect();
+        place(el, tip, ((x(d.week) + x.bandwidth()) / W) * box.width, 2);
+      })
+      .on('pointerleave', () => { tip.hidden = true; });
+  });
+
+  // landing pages: drop-off with the period before
+  dash.draw('pages', (el) => {
+    const r = rows('period_pages'), p = pid(); if (!start(el, !!(r && p))) return;
+    const s = series(), narrow = el.clientWidth < 620;
+    hbars(el, r.filter((x) => x.period === p).map((x) => ({ label: x.page, value: x.dropoff_pct, prev: x.dropoff_prev, color: s.ws,
+      right: narrow ? `mobile ${x.load_mobile_s.toFixed(1)}s` : `${x.visitors.toLocaleString('en-IN')} visitors · mobile ${x.load_mobile_s.toFixed(1)}s · desktop ${x.load_desktop_s.toFixed(1)}s`,
+      rightColor: x.load_mobile_s > 3 ? 'var(--color-bad)' : null,
+      tip: [`Drop-off ${x.dropoff_pct.toFixed(1)}%${x.dropoff_prev != null ? ` (before ${x.dropoff_prev.toFixed(1)}%)` : ''}`, `${x.visitors.toLocaleString('en-IN')} visitors`, `Load: mobile ${x.load_mobile_s.toFixed(1)}s, desktop ${x.load_desktop_s.toFixed(1)}s`] })),
+      { rowH: 28, max: 100, rightW: narrow ? 90 : 300, valueLabel: (d) => d.value.toFixed(1) + '%', label: 'Landing-page drop-off' });
+  });
+})();
+</script>
+
+</div>
+</body>
+</html>
